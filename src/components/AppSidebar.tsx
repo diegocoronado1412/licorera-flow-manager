@@ -1,14 +1,14 @@
-import { 
-  Home, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  BarChart3, 
-  Clock, 
-  Settings,
-  LogOut
+import {
+  Home,
+  ShoppingCart,
+  Package,
+  Users,
+  BarChart3,
+  Clock,
+  Settings as SettingsIcon,
+  LogOut,
 } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -22,8 +22,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import logoImage from "@/assets/logo-licorera.jpg";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useSession } from "@/contexts/SessionContext";
+import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
   { title: "Dashboard", url: "/", icon: Home },
@@ -37,40 +39,47 @@ const navigationItems = [
 export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
+  const { settings } = useSettings();
+  const { user, logout } = useSession();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = () => {
+    logout();
     toast({
       title: "Sesión cerrada",
       description: "Has cerrado sesión correctamente",
     });
+    navigate("/login", { replace: true });
   };
 
   return (
     <Sidebar className={`${!open ? "w-16" : "w-64"} transition-all duration-300`}>
       <SidebarContent className="bg-sidebar border-r border-sidebar-border">
-        {/* Logo Section */}
+        {/* Logo / Nombre negocio */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
-              <img 
-                src={logoImage} 
-                alt="LA LICORERA" 
+              <img
+                src={logoImage}
+                alt={settings?.business.name ?? "LA LICORERA"}
                 className="w-full h-full object-cover"
               />
             </div>
             {open && (
               <div className="animate-premium-fade">
-                <h2 className="text-lg font-bold text-primary">LA LICORERA</h2>
+                <h2 className="text-lg font-bold text-primary">
+                  {settings?.business.name ?? "LA LICORERA"}
+                </h2>
                 <p className="text-xs text-muted-foreground">Drink Ice</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navegación principal */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground px-4 py-2">
             {open && "Navegación Principal"}
@@ -82,19 +91,19 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      className={({ isActive }) => `
+                      className={({ isActive: navActive }) => `
                         flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200
-                        ${isActive 
-                          ? "bg-primary/20 text-primary shadow-premium border border-primary/30" 
+                        ${navActive
+                          ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
                           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         }
                         ${!open ? "justify-center" : ""}
                       `}
                     >
-                      <item.icon className={`h-5 w-5 ${isActive(item.url) && "animate-neon-pulse"}`} />
-                      {open && (
-                        <span className="animate-premium-fade">{item.title}</span>
-                      )}
+                      <item.icon
+                        className={`h-5 w-5 ${isActive(item.url) && "animate-neon-pulse"}`}
+                      />
+                      {open && <span className="animate-premium-fade">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -103,7 +112,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Settings Section */}
+        {/* Sistema */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground px-4 py-2">
             {open && "Sistema"}
@@ -114,16 +123,16 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <NavLink
                     to="/settings"
-                    className={({ isActive }) => `
+                    className={({ isActive: navActive }) => `
                       flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200
-                      ${isActive 
-                        ? "bg-primary/20 text-primary shadow-premium border border-primary/30" 
+                      ${navActive
+                        ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }
                       ${!open ? "justify-center" : ""}
                     `}
                   >
-                    <Settings className="h-5 w-5" />
+                    <SettingsIcon className="h-5 w-5" />
                     {open && <span className="animate-premium-fade">Configuración</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -133,13 +142,13 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer */}
+      {/* Footer: usuario/turno + logout */}
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="space-y-2">
           {open && (
             <div className="text-xs text-muted-foreground animate-premium-fade">
-              <p className="font-medium text-primary">Usuario: Administrador</p>
-              <p>Turno: Mañana</p>
+              <p className="font-medium text-primary">Usuario: {user?.name ?? "—"}</p>
+              <p>Turno: {user?.shift ?? "—"}</p>
             </div>
           )}
           <Button

@@ -1,13 +1,37 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, User, RefreshCw } from "lucide-react";
+import { Bell, User, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { useSettings } from "@/contexts/SettingsContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useSession } from "@/contexts/SessionContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 
 export function AppHeader() {
+  const { settings } = useSettings();
+  const { items, unread, markAllRead } = useNotifications();
+  const { user, usersList, switchUser, logout } = useSession();
+  const navigate = useNavigate();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between px-4">
-        {/* Left Section */}
+
+        {/* Left */}
         <div className="flex items-center gap-4">
           <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground transition-colors" />
           <div className="hidden md:flex items-center gap-2">
@@ -18,34 +42,110 @@ export function AppHeader() {
           </div>
         </div>
 
-        {/* Center Section - Quick Actions */}
+        {/* Center */}
         <div className="hidden lg:flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Sincronizar
-          </Button>
+          <span className="text-sm font-semibold">
+            {settings?.business.name ?? "LA LICORERA"}
+          </span>
         </div>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-3">
+        {/* Right */}
+        <div className="flex items-center gap-2">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative hover:bg-accent/20">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs bg-destructive hover:bg-destructive">
-              3
-            </Badge>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative hover:bg-accent/20">
+                <Bell className="h-5 w-5" />
+                {unread && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-block w-2 h-2 rounded-full bg-destructive" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notificaciones</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {items.length === 0 ? (
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No hay notificaciones
+                </div>
+              ) : (
+                <>
+                  {items.map((n) => (
+                    <div key={n.id} className="px-3 py-2 flex gap-3 items-start">
+                      {n.level === "success" && <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />}
+                      {n.level === "warning" && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
+                      {n.level === "info"    && <Info className="h-4 w-4 text-blue-500 mt-0.5" />}
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{n.title}</div>
+                        {n.description && <div className="text-xs text-muted-foreground truncate">{n.description}</div>}
+                      </div>
+                    </div>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <div className="px-3 pb-2">
+                    <Button variant="outline" size="sm" className="w-full" onClick={markAllRead}>
+                      Marcar como leídas
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* User Menu */}
-          <div className="flex items-center gap-3 pl-3 border-l border-border">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground">Administrador</p>
-              <p className="text-xs text-muted-foreground">Turno Mañana</p>
-            </div>
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/20">
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
+          {/* User menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full hover:bg-primary/20">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>
+                <div className="space-y-1">
+                  <div className="text-sm font-semibold">{user?.name ?? "Sin sesión"}</div>
+                  {user && (
+                    <div className="text-xs text-muted-foreground capitalize">
+                      Rol: {user.role === "admin" ? "Administrador" : "Cajero"} · Turno: {user.shift}
+                    </div>
+                  )}
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuGroup>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Cambiar de usuario</DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      {usersList.map(u => (
+                        <DropdownMenuItem
+                          key={u.id}
+                          onClick={() => {
+                            switchUser(u.id);
+                            toast.success(`Sesión: ${u.name}`);
+                            navigate("/", { replace: true });
+                          }}
+                        >
+                          {u.name}{user?.id === u.id && <span className="ml-auto text-xs text-muted-foreground">(actual)</span>}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  logout();
+                  toast.success("Sesión cerrada");
+                  navigate("/login", { replace: true });
+                }}
+              >
+                Cerrar sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

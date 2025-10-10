@@ -3,11 +3,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Package, TrendingUp, DollarSign } from "lucide-react";
+import { Search, Package, TrendingUp, DollarSign, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-// 👉 si NO tienes alias "@", usa "../services/api"
-import { fetchProducts, type Product as ApiProduct } from "../hooks/api";
+import {
+  fetchProducts,
+  type Product as ApiProduct,
+  updateProduct,
+  adjustStock,
+  createProduct,
+  deleteProduct,
+} from "../hooks/api";
 
 type Row = {
   id: number;
@@ -16,9 +36,9 @@ type Row = {
   finalCount: number;   // stock
   costPerUnit: number;  // cost_per_unit
   salePrice: number;    // price
-  totalCost: number;    // stock * cost
-  totalSales: number;   // stock * price (potencial)
-  profit: number;       // (price - cost) * stock (potencial)
+  totalCost: number;
+  totalSales: number;
+  profit: number;
 };
 
 const formatCurrency = (n: number) =>
@@ -67,13 +87,21 @@ export default function Inventory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // edición
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Row | null>(null);
+  const [form, setForm] = useState({ name: "", price: "", cost: "", stock: "" });
+
+  // creación
+  const [openNew, setOpenNew] = useState(false);
+  const [newForm, setNewForm] = useState({ name: "", price: "", cost: "", stock: "" });
+
   async function load(q?: string) {
     setLoading(true);
     setError(null);
     try {
       const data = await fetchProducts(q);
       setRows(data.map(toRow));
-      console.log("Cargados desde API:", data.length);
     } catch (e: any) {
       console.error(e);
       setError(e?.message ?? "Error cargando productos");
@@ -81,7 +109,6 @@ export default function Inventory() {
       setLoading(false);
     }
   }
-
   useEffect(() => { load(searchTerm); }, [searchTerm]);
 
   const categories = useMemo(() => {
@@ -102,6 +129,90 @@ export default function Inventory() {
   const totalSalesValue     = filtered.reduce((s, x) => s + x.totalSales, 0);
   const totalProfitValue    = filtered.reduce((s, x) => s + x.profit, 0);
 
+  function onEditClick(r: Row) {
+    setEditing(r);
+    setForm({
+      name: r.name,
+      price: r.salePrice.toString(),
+      cost: r.costPerUnit.toString(),
+      stock: r.finalCount.toString(),
+    });
+    setOpen(true);
+  }
+
+  function newFormValue(v: string) {
+    return v.trim();
+  }
+  function numberOrZero(v: string) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+    }
+
+  async function onSave() {
+    if (!editing) return;
+    try {
+      const newName  = newFormValue(form.name);
+      const newPrice = numberOrZero(form.price);
+      const newCost  = numberOrZero(form.cost);
+
+      await updateProduct(editing.id, {
+        name: newName,
+        price: newPrice,
+        cost_per_unit: newCost,
+      });
+
+      const newStock = numberOrZero(form.stock);
+      const delta = newStock - editing.finalCount;
+      if (delta !== 0) {
+        await adjustStock(editing.id, delta, "ajuste desde pantalla Inventario");
+      }
+
+      toast.success("Producto actualizado");
+      setOpen(false);
+      setEditing(null);
+      await load(searchTerm);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "No se pudo actualizar");
+    }
+  }
+
+  async function onCreate() {
+    try {
+      const name  = newFormValue(newForm.name);
+      const price = numberOrZero(newForm.price);
+      const cost  = numberOrZero(newForm.cost);
+      const stock = numberOrZero(newForm.stock);
+
+      if (!name) {
+        toast.error("El nombre es obligatorio");
+        return;
+      }
+      const p = await createProduct({ name, price, cost_per_unit: cost, stock });
+
+      toast.success(`Producto creado: ${p.name}`);
+      setOpenNew(false);
+      setNewForm({ name: "", price: "", cost: "", stock: "" });
+      await load(searchTerm);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "No se pudo crear el producto");
+    }
+  }
+
+  async function handleDelete(id: number) {
+    try {
+      await deleteProduct(id);
+      toast.success("Producto eliminado");
+      await load(searchTerm);
+    } catch (e: any) {
+      console.error(e);
+      // mensajes comunes del backend: 404, 409
+      const msg = e?.response?.data?.detail || e?.message || "No se pudo eliminar";
+      toast.error(msg);
+    }
+  }
+
   return (
     <div className="flex-1 space-y-6 p-8 pt-6 bg-gradient-to-br from-background via-background to-accent/5">
       <div className="flex items-center justify-between">
@@ -111,6 +222,12 @@ export default function Inventory() {
           </h2>
           <p className="text-muted-foreground">Control del inventario de LA LICORERA Drink Ice</p>
           {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setOpenNew(true)}>
+            <Plus className="w-4 h-4 mr-1" />
+            Nuevo Producto
+          </Button>
         </div>
       </div>
 
@@ -208,19 +325,20 @@ export default function Inventory() {
                 <TableRow className="hover:bg-muted/50">
                   <TableHead className="font-semibold">Producto</TableHead>
                   <TableHead className="font-semibold">Categoría</TableHead>
-                  <TableHead className="font-semibold text-center">Stock Actual</TableHead>
+                  <TableHead className="font-semibold text-center">Stock</TableHead>
                   <TableHead className="font-semibold text-center">Estado</TableHead>
                   <TableHead className="font-semibold text-right">Costo Unit.</TableHead>
-                  <TableHead className="font-semibold text-right">Precio Venta</TableHead>
-                  <TableHead className="font-semibold text-right">Valor Inventario</TableHead>
-                  <TableHead className="font-semibold text-right">Utilidad Potencial</TableHead>
+                  <TableHead className="font-semibold text-right">Precio</TableHead>
+                  <TableHead className="font-semibold text-right">Valor Inv.</TableHead>
+                  <TableHead className="font-semibold text-right">Utilidad</TableHead>
+                  <TableHead className="font-semibold text-right w-[120px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={8}>Cargando…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9}>Cargando…</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8}>Sin resultados</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9}>Sin resultados</TableCell></TableRow>
                 ) : (
                   filtered.map((p) => (
                     <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
@@ -238,6 +356,41 @@ export default function Inventory() {
                           {formatCurrency(p.profit)}
                         </span>
                       </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => onEditClick(p)}>
+                          <Pencil className="w-4 h-4 mr-1" /> Editar
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              aria-label="Eliminar"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="sr-only">Eliminar</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar “{p.name}”?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción es permanente. Si el producto tiene ventas o ajustes previos,
+                                no se permitirá eliminar para preservar el historial.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(p.id)}>
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -246,6 +399,80 @@ export default function Inventory() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal editar */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Editar producto</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Nombre</Label>
+              <Input className="col-span-3" value={form.name}
+                     onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Precio</Label>
+              <Input type="number" className="col-span-3" value={form.price}
+                     onChange={(e) => setForm(f => ({ ...f, price: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Costo</Label>
+              <Input type="number" className="col-span-3" value={form.cost}
+                     onChange={(e) => setForm(f => ({ ...f, cost: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Stock</Label>
+              <Input type="number" className="col-span-3" value={form.stock}
+                     onChange={(e) => setForm(f => ({ ...f, stock: e.target.value }))}/>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={onSave}>Guardar cambios</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal nuevo */}
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Nuevo producto</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Nombre</Label>
+              <Input className="col-span-3" value={newForm.name}
+                     onChange={(e) => setNewForm(f => ({ ...f, name: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Precio</Label>
+              <Input type="number" className="col-span-3" value={newForm.price}
+                     onChange={(e) => setNewForm(f => ({ ...f, price: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Costo</Label>
+              <Input type="number" className="col-span-3" value={newForm.cost}
+                     onChange={(e) => setNewForm(f => ({ ...f, cost: e.target.value }))}/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Stock inicial</Label>
+              <Input type="number" className="col-span-3" value={newForm.stock}
+                     onChange={(e) => setNewForm(f => ({ ...f, stock: e.target.value }))}/>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
+            <Button onClick={onCreate}>Crear</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
