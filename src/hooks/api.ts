@@ -1,11 +1,26 @@
+// LICORERA/licorera-flow-manager/src/hooks/api.ts
 import axios from "axios";
 
+/**
+ * Normaliza VITE_API_BASE o usa window.location.origin y asegura que termine con /api
+ */
+function normalizeApiBase(raw?: string) {
+  if (!raw) {
+    return `${window.location.origin.replace(/\/+$/,"")}/api`;
+  }
+  return raw.replace(/\/+$/,"");
+}
+
 export const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE || window.location.origin;
+  normalizeApiBase((import.meta as any).env?.VITE_API_BASE);
 export const ADMIN_KEY =
   (import.meta as any).env?.VITE_ADMIN_KEY || "CambiaEstaClave";
 
-export const api = axios.create({ baseURL: API_BASE });
+export const api = axios.create({
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json" },
+  // timeout: 15000, // opcional
+});
 
 /* -------- Productos -------- */
 export type Product = {
@@ -105,6 +120,8 @@ export async function updateSettings(patch: AppSettingsUpdate) {
 }
 
 /* -------- Staff / Usuarios / Asistencia / Pagos -------- */
+// (mantén tu implementación tal como está arriba — no cambié la API ni firmas)
+
 export type Staff = {
   id: number;
   username: string;
@@ -148,65 +165,54 @@ export type StaffPayment = {
   notes?: string | null;
 };
 
-// ---- Staff CRUD
 export async function fetchStaff() {
   const { data } = await api.get<Staff[]>("/staff", {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
 export async function createStaff(payload: StaffCreate) {
   const { data } = await api.post<Staff>("/staff", payload, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
 export async function updateStaff(id: number, patch: StaffUpdate) {
   const { data } = await api.put<Staff>(`/staff/${id}`, patch, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
 export async function updateStaffPassword(id: number, password: string) {
   const { data } = await api.put(`/staff/${id}/password`, { password }, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data as { ok: boolean };
 }
-
 export async function deleteStaff(id: number) {
   const { data } = await api.delete(`/staff/${id}`, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data as { ok: boolean };
 }
-
-// ---- Asistencia
 export async function clockIn(staff_id: number) {
   const { data } = await api.post<StaffShift>(`/staff/${staff_id}/clock-in`, {}, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
 export async function clockOut(staff_id: number) {
   const { data } = await api.post<StaffShift>(`/staff/${staff_id}/clock-out`, {}, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
 export async function fetchShifts(staff_id: number, params?: { start?: string; end?: string }) {
   const { data } = await api.get<StaffShift[]>(`/staff/${staff_id}/shifts`, {
     params, headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
 }
-
-// ---- Pagos
 export async function createPayment(p: {
   staff_id: number; amount: number; method: string; period_start?: string; period_end?: string; notes?: string;
 }) {
@@ -215,7 +221,6 @@ export async function createPayment(p: {
   });
   return data;
 }
-
 export async function fetchPayments(params?: { staff_id?: number; start?: string; end?: string }) {
   const { data } = await api.get<StaffPayment[]>("/staff/payments", {
     params,
@@ -229,10 +234,56 @@ export async function deleteShift(shift_id: number) {
   });
   return data as { ok: boolean };
 }
-
 export async function deletePayment(payment_id: number) {
   const { data } = await api.delete(`/staff/payments/${payment_id}`, {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data as { ok: boolean };
+}
+
+/* -------- Reports / Sales API -------- */
+export async function fetchSalesReport(opts: {
+  start?: string;
+  end?: string;
+  payment_method?: string | undefined;
+  staff_id?: number | undefined;
+  q?: string;
+  limit?: number;
+}) {
+  try {
+    const params: Record<string, any> = {};
+    if (opts.start) params.start = opts.start;
+    if (opts.end) params.end = opts.end;
+    if (opts.payment_method) params.payment_method = opts.payment_method;
+    if (typeof opts.staff_id !== "undefined" && opts.staff_id !== null) params.staff_id = opts.staff_id;
+    if (opts.q) params.q = opts.q;
+    if (opts.limit) params.limit = opts.limit;
+    const { data } = await api.get("/sales", { params });
+    return data as { rows: any[] };
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.detail || err?.message || "Error en fetchSalesReport");
+  }
+}
+
+export async function fetchSaleDetail(id: number) {
+  try {
+    const { data } = await api.get(`/sales/${id}`);
+    return data as any;
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.detail || err?.message || "Error cargando detalle de venta");
+  }
+}
+
+export async function exportSalesCSV(opts: { start?: string; end?: string; payment_method?: string | undefined; staff_id?: number | undefined; }) {
+  try {
+    const params: Record<string, any> = {};
+    if (opts.start) params.start = opts.start;
+    if (opts.end) params.end = opts.end;
+    if (opts.payment_method) params.payment_method = opts.payment_method;
+    if (typeof opts.staff_id !== "undefined" && opts.staff_id !== null) params.staff_id = opts.staff_id;
+    const res = await api.get("/sales/export", { params, responseType: "blob" });
+    return res.data as Blob;
+  } catch (err: any) {
+    throw new Error(err?.response?.data?.detail || err?.message || "Error exportando CSV");
+  }
 }

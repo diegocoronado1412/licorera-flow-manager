@@ -1,3 +1,4 @@
+// LICORERA/licorera-flow-manager/src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +16,7 @@ import POS from "./pages/POS";
 import SettingsPage from "./pages/Settings";
 import Login from "./pages/Login";
 import UsersPage from "./pages/Users"; // ⬅️ NUEVA
+import ReportsPage from "./pages/ReportsPage"; // <-- nueva pantalla
 
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -80,6 +82,14 @@ const App = () => (
                             element={
                               <ProtectedRoute>
                                 <UsersPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/reports"
+                            element={
+                              <ProtectedRoute>
+                                <ReportsPage />
                               </ProtectedRoute>
                             }
                           />
