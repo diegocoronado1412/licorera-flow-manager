@@ -30,7 +30,6 @@ export function Dashboard() {
         const data = await fetchDashboardStats();
         setStats(data);
       } catch {
-        // silencioso
       }
     })();
   }, []);
@@ -52,7 +51,6 @@ export function Dashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-premium-fade">
-      {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
@@ -135,9 +133,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Content Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Inventory Alerts */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

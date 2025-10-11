@@ -25,7 +25,6 @@ export function useNotifications() {
 
     const list: NotificationItem[] = [];
 
-    // Stock bajo (si está activado en configuración)
     if (settings?.alerts.stock_low && stats.low_stock?.length) {
       const names = stats.low_stock.slice(0, 3).map(s => s.name).join(", ");
       const extra = stats.low_stock.length > 3 ? ` y ${stats.low_stock.length - 3} más` : "";
@@ -37,7 +36,6 @@ export function useNotifications() {
       });
     }
 
-    // Ventas del día
     if (stats.today?.count && stats.today.count > 0) {
       list.push({
         id: "sales_today",
@@ -47,7 +45,6 @@ export function useNotifications() {
       });
     }
 
-    // Top producto
     if (stats.top_products?.length) {
       const top = stats.top_products[0];
       list.push({
@@ -61,7 +58,6 @@ export function useNotifications() {
     return list;
   }, [stats, settings]);
 
-  // Unread basado en hash simple
   const currentHash = useMemo(() => JSON.stringify(items.map(i => i.id + (i.description || ""))), [items]);
   const [unread, setUnread] = useState(false);
 

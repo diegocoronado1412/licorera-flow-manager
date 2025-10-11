@@ -49,7 +49,8 @@ export async function deleteProduct(product_id: number) {
 
 export async function adjustStock(product_id: number, qty: number, note?: string) {
   const { data } = await api.post(
-    "/inventory/adjust", { product_id, qty, note },
+    "/inventory/adjust",
+    { product_id, qty, note },
     { headers: { "X-API-Key": ADMIN_KEY } }
   );
   return data as { ok: boolean; new_stock: number };
@@ -101,4 +102,137 @@ export async function updateSettings(patch: AppSettingsUpdate) {
     headers: { "X-API-Key": ADMIN_KEY },
   });
   return data;
+}
+
+/* -------- Staff / Usuarios / Asistencia / Pagos -------- */
+export type Staff = {
+  id: number;
+  username: string;
+  name: string;
+  role: "admin" | "cashier" | "waiter" | "other";
+  shift?: string | null;
+  active: boolean;
+  pay_type: "hourly" | "fixed";
+  pay_rate: number;
+};
+
+export type StaffCreate = {
+  username: string;
+  name: string;
+  role?: Staff["role"];
+  shift?: string | null;
+  password: string;
+  active?: boolean;
+  pay_type?: Staff["pay_type"];
+  pay_rate?: number;
+};
+
+export type StaffUpdate = Partial<Omit<Staff, "id">>;
+
+export type StaffShift = {
+  id: number;
+  staff_id: number;
+  clock_in: string;
+  clock_out?: string | null;
+  notes?: string | null;
+};
+
+export type StaffPayment = {
+  id: number;
+  staff_id: number;
+  amount: number;
+  method: string;
+  period_start?: string | null;
+  period_end?: string | null;
+  paid_at: string;
+  notes?: string | null;
+};
+
+// ---- Staff CRUD
+export async function fetchStaff() {
+  const { data } = await api.get<Staff[]>("/staff", {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function createStaff(payload: StaffCreate) {
+  const { data } = await api.post<Staff>("/staff", payload, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function updateStaff(id: number, patch: StaffUpdate) {
+  const { data } = await api.put<Staff>(`/staff/${id}`, patch, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function updateStaffPassword(id: number, password: string) {
+  const { data } = await api.put(`/staff/${id}/password`, { password }, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data as { ok: boolean };
+}
+
+export async function deleteStaff(id: number) {
+  const { data } = await api.delete(`/staff/${id}`, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data as { ok: boolean };
+}
+
+// ---- Asistencia
+export async function clockIn(staff_id: number) {
+  const { data } = await api.post<StaffShift>(`/staff/${staff_id}/clock-in`, {}, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function clockOut(staff_id: number) {
+  const { data } = await api.post<StaffShift>(`/staff/${staff_id}/clock-out`, {}, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function fetchShifts(staff_id: number, params?: { start?: string; end?: string }) {
+  const { data } = await api.get<StaffShift[]>(`/staff/${staff_id}/shifts`, {
+    params, headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+// ---- Pagos
+export async function createPayment(p: {
+  staff_id: number; amount: number; method: string; period_start?: string; period_end?: string; notes?: string;
+}) {
+  const { data } = await api.post<StaffPayment>("/staff/payments", p, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+
+export async function fetchPayments(params?: { staff_id?: number; start?: string; end?: string }) {
+  const { data } = await api.get<StaffPayment[]>("/staff/payments", {
+    params,
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data;
+}
+export async function deleteShift(shift_id: number) {
+  const { data } = await api.delete(`/staff/shifts/${shift_id}`, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data as { ok: boolean };
+}
+
+export async function deletePayment(payment_id: number) {
+  const { data } = await api.delete(`/staff/payments/${payment_id}`, {
+    headers: { "X-API-Key": ADMIN_KEY },
+  });
+  return data as { ok: boolean };
 }

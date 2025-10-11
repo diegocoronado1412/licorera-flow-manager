@@ -14,6 +14,7 @@ import Inventory from "./pages/Inventory";
 import POS from "./pages/POS";
 import SettingsPage from "./pages/Settings";
 import Login from "./pages/Login";
+import UsersPage from "./pages/Users"; // ⬅️ NUEVA
 
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -71,6 +72,14 @@ const App = () => (
                             element={
                               <ProtectedRoute>
                                 <SettingsPage />
+                              </ProtectedRoute>
+                            }
+                          />
+                          <Route
+                            path="/users"
+                            element={
+                              <ProtectedRoute>
+                                <UsersPage />
                               </ProtectedRoute>
                             }
                           />

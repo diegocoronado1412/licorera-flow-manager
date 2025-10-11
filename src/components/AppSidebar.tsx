@@ -31,7 +31,7 @@ const navigationItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Punto de Venta", url: "/pos", icon: ShoppingCart },
   { title: "Inventario", url: "/inventory", icon: Package },
-  { title: "Usuarios", url: "/users", icon: Users },
+  { title: "Personal", url: "/users", icon: Users },
   { title: "Reportes", url: "/reports", icon: BarChart3 },
   { title: "Turnos", url: "/shifts", icon: Clock },
 ];
@@ -58,7 +58,6 @@ export function AppSidebar() {
   return (
     <Sidebar className={`${!open ? "w-16" : "w-64"} transition-all duration-300`}>
       <SidebarContent className="bg-sidebar border-r border-sidebar-border">
-        {/* Logo / Nombre negocio */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-primary/10 flex items-center justify-center">
@@ -79,7 +78,6 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Navegación principal */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground px-4 py-2">
             {open && "Navegación Principal"}
@@ -112,7 +110,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Sistema */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-muted-foreground px-4 py-2">
             {open && "Sistema"}
@@ -142,7 +139,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer: usuario/turno + logout */}
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="space-y-2">
           {open && (

@@ -10,7 +10,7 @@ import { useSession } from "@/contexts/SessionContext";
 import { useSettings } from "@/contexts/SettingsContext";
 
 export default function Login() {
-  const { login, quickLogin } = useSession();
+  const { login } = useSession();
   const { settings } = useSettings();
   const navigate = useNavigate();
 
@@ -32,29 +32,48 @@ export default function Login() {
     }
   }
 
+  // Burbujas (posición, tamaño, amplitud, duración)
+  const bubbles = [
+    { top: "8%",  left: "10%", size: 120, ampX: "18vw", dur: "24s", delay: "-2s" },
+    { top: "20%", left: "78%", size: 90,  ampX: "15vw", dur: "28s", delay: "-8s" },
+    { top: "66%", left: "7%",  size: 100, ampX: "16vw", dur: "26s", delay: "-11s" },
+    { top: "72%", left: "72%", size: 130, ampX: "20vw", dur: "30s", delay: "-4s" },
+    { top: "38%", left: "50%", size: 70,  ampX: "12vw", dur: "22s", delay: "-14s" },
+    { top: "14%", left: "52%", size: 65,  ampX: "13vw", dur: "32s", delay: "-6s" },
+    { top: "82%", left: "36%", size: 95,  ampX: "14vw", dur: "28s", delay: "-16s" },
+    { top: "30%", left: "24%", size: 75,  ampX: "11vw", dur: "25s", delay: "-10s" },
+    { top: "54%", left: "85%", size: 80,  ampX: "13vw", dur: "27s", delay: "-18s" },
+  ];
+
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
-      {/* Fondo con burbuja orbital */}
-      <div className="absolute inset-0 pointer-events-none">
+    // FONDO A PANTALLA COMPLETA + CARD CENTRADO
+    <div className="fixed inset-0 grid place-items-center bg-background overflow-hidden">
+      {/* Fondo con burbujas */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/10" />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20">
-          <div className="relative w-[65vmin] h-[65vmin]">
-            <div className="absolute left-1/2 top-1/2">
-              <div className="orbit">
-                <img
-                  src={logoImage}
-                  alt="logo"
-                  className="bubble"
-                  style={{ transform: "translateX(22vmin)" }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        {bubbles.map((b, i) => (
+          <img
+            key={i}
+            src={logoImage}
+            alt="bubble"
+            className="absolute rounded-full shadow-2xl bubble-move"
+            style={
+              {
+                top: b.top,
+                left: b.left,
+                width: `${b.size}px`,
+                height: `${b.size}px`,
+                ["--amp-x" as any]: b.ampX,
+                ["--dur" as any]: b.dur,
+                ["--delay" as any]: b.delay,
+              } as React.CSSProperties
+            }
+          />
+        ))}
       </div>
 
-      {/* Contenido */}
-      <div className="relative z-10 w-full max-w-md p-4">
+      {/* Contenido centrado */}
+      <div className="relative z-10 w-[min(92vw,440px)] px-2">
         <Card className="backdrop-blur supports-[backdrop-filter]:bg-background/70 border-border/60">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 rounded-xl overflow-hidden shadow-md">
@@ -75,6 +94,7 @@ export default function Login() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="ADMIN / TURNO1 / TURNO2"
                   autoFocus
+                  autoComplete="username"
                 />
               </div>
               <div>
@@ -84,6 +104,7 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="********"
+                  autoComplete="current-password"
                 />
               </div>
 
@@ -91,81 +112,33 @@ export default function Login() {
                 {busy ? "Ingresando…" : "Ingresar"}
               </Button>
 
-              {/* Atajos para pruebas (opcional). Puedes ocultarlos si quieres */}
-              <div className="flex gap-2 justify-between mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await quickLogin("admin");
-                      toast.success("Sesión: ADMIN");
-                      navigate("/", { replace: true });
-                    } catch {}
-                  }}
-                >
-                  ADMIN
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await quickLogin("turno1");
-                      toast.success("Sesión: TURNO1");
-                      navigate("/", { replace: true });
-                    } catch {}
-                  }}
-                >
-                  TURNO 1
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await quickLogin("turno2");
-                      toast.success("Sesión: TURNO2");
-                      navigate("/", { replace: true });
-                    } catch {}
-                  }}
-                >
-                  TURNO 2
-                </Button>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground mt-2">
-                *Demo: credenciales válidas — ADMIN/ADMIN0001, TURNO1/TURNO12025, TURNO2/TURNO22025
+              <p className="text-[11px] text-muted-foreground mt-2 text-center">
+                Inicia sesión
               </p>
             </form>
           </CardContent>
         </Card>
       </div>
 
-      {/* CSS para la burbuja/orbita */}
+      {/* CSS de animación */}
       <style>{`
-        @keyframes orbit {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes float-x {
+          from { transform: translateX(calc(var(--amp-x) * -1)); }
+          to   { transform: translateX(var(--amp-x)); }
         }
-        .orbit {
-          position: relative;
-          width: 0;
-          height: 0;
-          animation: orbit 36s linear infinite;
+        @keyframes float-y {
+          from { transform: translateY(-2vh); }
+          to   { transform: translateY(2vh); }
         }
-        .bubble {
-          width: 22vmin;
-          height: 22vmin;
-          border-radius: 9999px;
+        .bubble-move {
           object-fit: cover;
           filter: blur(1px) saturate(1.05);
           opacity: .55;
           box-shadow: 0 0 40px rgba(0,0,0,.12), inset 0 0 60px rgba(255,255,255,.07);
-          transition: opacity .3s ease;
+          animation:
+            float-x var(--dur) ease-in-out infinite alternate,
+            float-y calc(var(--dur) * 0.7) ease-in-out infinite alternate;
+          animation-delay: var(--delay);
         }
       `}</style>
     </div>

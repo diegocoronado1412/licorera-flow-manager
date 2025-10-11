@@ -4,7 +4,7 @@ export type Role = "admin" | "cashier";
 export type Shift = "Mañana" | "Tarde" | "Noche";
 
 export type SessionUser = {
-  id: string;          // ADMIN | TURNO1 | TURNO2
+  id: string;         
   name: string;
   role: Role;
   shift: Shift;
@@ -15,7 +15,7 @@ type SessionCtx = {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   switchUser: (id: string) => void;
-  quickLogin: (id: string) => Promise<void>; // ⬅️ NUEVO
+  quickLogin: (id: string) => Promise<void>; 
   logout: () => void;
   usersList: SessionUser[];
 };
@@ -59,7 +59,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEY, item.user.id);
   }
 
-  // ⬇️ Para los botones rápidos del Login (sin pedir contraseña)
   async function quickLogin(id: string) {
     const key = (id || "").trim().toUpperCase();
     const item = USERS[key];

@@ -33,9 +33,9 @@ type Row = {
   id: number;
   name: string;
   category: string;
-  finalCount: number;   // stock
-  costPerUnit: number;  // cost_per_unit
-  salePrice: number;    // price
+  finalCount: number;  
+  costPerUnit: number; 
+  salePrice: number;    
   totalCost: number;
   totalSales: number;
   profit: number;
@@ -87,12 +87,10 @@ export default function Inventory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // edición
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [form, setForm] = useState({ name: "", price: "", cost: "", stock: "" });
 
-  // creación
   const [openNew, setOpenNew] = useState(false);
   const [newForm, setNewForm] = useState({ name: "", price: "", cost: "", stock: "" });
 
@@ -207,7 +205,6 @@ export default function Inventory() {
       await load(searchTerm);
     } catch (e: any) {
       console.error(e);
-      // mensajes comunes del backend: 404, 409
       const msg = e?.response?.data?.detail || e?.message || "No se pudo eliminar";
       toast.error(msg);
     }
@@ -231,7 +228,6 @@ export default function Inventory() {
         </div>
       </div>
 
-      {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -278,7 +274,6 @@ export default function Inventory() {
         </Card>
       </div>
 
-      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros de Inventario</CardTitle>
@@ -312,7 +307,6 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
-      {/* Tabla */}
       <Card>
         <CardHeader>
           <CardTitle>Inventario Detallado</CardTitle>
@@ -400,7 +394,6 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
-      {/* Modal editar */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
