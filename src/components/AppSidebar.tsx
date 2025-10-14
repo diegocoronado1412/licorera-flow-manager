@@ -4,7 +4,6 @@ import {
   Package,
   Users,
   BarChart3,
-  Clock,
   Settings as SettingsIcon,
   LogOut,
 } from "lucide-react";
@@ -33,7 +32,7 @@ const navigationItems = [
   { title: "Inventario", url: "/inventory", icon: Package },
   { title: "Personal", url: "/users", icon: Users },
   { title: "Reportes", url: "/reports", icon: BarChart3 },
-  { title: "Turnos", url: "/shifts", icon: Clock },
+  // Se eliminó el item de "Turnos"
 ];
 
 export function AppSidebar() {
@@ -91,17 +90,22 @@ export function AppSidebar() {
                       to={item.url}
                       className={({ isActive: navActive }) => `
                         flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200
-                        ${navActive
-                          ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        ${
+                          navActive
+                            ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         }
                         ${!open ? "justify-center" : ""}
                       `}
                     >
                       <item.icon
-                        className={`h-5 w-5 ${isActive(item.url) && "animate-neon-pulse"}`}
+                        className={`h-5 w-5 ${
+                          isActive(item.url) && "animate-neon-pulse"
+                        }`}
                       />
-                      {open && <span className="animate-premium-fade">{item.title}</span>}
+                      {open && (
+                        <span className="animate-premium-fade">{item.title}</span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -122,15 +126,18 @@ export function AppSidebar() {
                     to="/settings"
                     className={({ isActive: navActive }) => `
                       flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200
-                      ${navActive
-                        ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      ${
+                        navActive
+                          ? "bg-primary/20 text-primary shadow-premium border border-primary/30"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       }
                       ${!open ? "justify-center" : ""}
                     `}
                   >
                     <SettingsIcon className="h-5 w-5" />
-                    {open && <span className="animate-premium-fade">Configuración</span>}
+                    {open && (
+                      <span className="animate-premium-fade">Configuración</span>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -143,8 +150,10 @@ export function AppSidebar() {
         <div className="space-y-2">
           {open && (
             <div className="text-xs text-muted-foreground animate-premium-fade">
-              <p className="font-medium text-primary">Usuario: {user?.name ?? "—"}</p>
-              <p>Turno: {user?.shift ?? "—"}</p>
+              <p className="font-medium text-primary">
+                Usuario: {user?.name ?? "—"}
+              </p>
+              {/* Se quitó la línea del turno */}
             </div>
           )}
           <Button

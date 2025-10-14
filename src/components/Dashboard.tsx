@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -18,7 +24,11 @@ import {
 import { fetchDashboardStats, type DashboardStats } from "@/hooks/api";
 
 const currency = (n: number) =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }).format(n || 0);
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -30,6 +40,7 @@ export function Dashboard() {
         const data = await fetchDashboardStats();
         setStats(data);
       } catch {
+        // Error silenciado para evitar bloqueos visuales
       }
     })();
   }, []);
@@ -51,19 +62,24 @@ export function Dashboard() {
 
   return (
     <div className="flex-1 space-y-6 p-6 animate-premium-fade">
+      {/* Encabezado */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Bienvenido al sistema de gestión </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            Bienvenido al sistema de gestión
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge className="bg-accent/20 text-accent border-accent/30">
             <Clock className="w-3 h-3 mr-1" />
-            Turno Mañana
+            Administrador General
           </Badge>
           <Button
             variant="outline"
-            onClick={() => navigate("/ventas")}
+            onClick={() => navigate("/reports")}
             className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
           >
             <Eye className="w-4 h-4 mr-2" />
@@ -72,6 +88,7 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Tarjetas principales */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className="premium-card hover:shadow-neon transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -79,9 +96,15 @@ export function Dashboard() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{currency(stats?.today.total || 0)}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {currency(stats?.today.total || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
-              <span className={`inline-flex items-center ${salesIncrease >= 0 ? "text-accent" : "text-destructive"}`}>
+              <span
+                className={`inline-flex items-center ${
+                  salesIncrease >= 0 ? "text-accent" : "text-destructive"
+                }`}
+              >
                 <TrendingUp className="w-3 h-3 mr-1" />
                 {salesIncrease.toFixed(1)}% vs ayer
               </span>
@@ -95,7 +118,9 @@ export function Dashboard() {
             <BarChart3 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{currency(stats?.this_month.total || 0)}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {currency(stats?.this_month.total || 0)}
+            </div>
             <p className="text-xs text-muted-foreground">
               <span className="inline-flex items-center text-accent">
                 <TrendingUp className="w-3 h-3 mr-1" />
@@ -107,11 +132,15 @@ export function Dashboard() {
 
         <Card className="premium-card hover:shadow-neon transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Productos Activos</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Productos Activos
+            </CardTitle>
             <Package className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats?.products_count ?? 0}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {stats?.products_count ?? 0}
+            </div>
             <p className="text-xs text-muted-foreground">
               <span className="inline-flex items-center text-destructive">
                 <AlertTriangle className="w-3 h-3 mr-1" />
@@ -123,16 +152,23 @@ export function Dashboard() {
 
         <Card className="premium-card hover:shadow-neon transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transacciones Hoy</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Transacciones Hoy
+            </CardTitle>
             <ShoppingCart className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats?.today.count ?? 0}</div>
-            <p className="text-xs text-muted-foreground">{stats ? `${stats.yesterday.count} ayer` : "\u00A0"}</p>
+            <div className="text-2xl font-bold text-foreground">
+              {stats?.today.count ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats ? `${stats.yesterday.count} ayer` : "\u00A0"}
+            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Alertas de inventario y productos más vendidos */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="glass-card">
           <CardHeader>
@@ -140,7 +176,9 @@ export function Dashboard() {
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Alertas de Inventario
             </CardTitle>
-            <CardDescription>Productos con stock bajo que requieren reposición</CardDescription>
+            <CardDescription>
+              Productos con stock bajo que requieren reposición
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {(stats?.low_stock ?? []).map((item) => (
@@ -150,7 +188,9 @@ export function Dashboard() {
               >
                 <div className="space-y-1">
                   <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">Stock: {item.stock}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Stock: {item.stock}
+                  </p>
                 </div>
                 <Badge variant="destructive" className="animate-pulse">
                   Crítico
@@ -173,12 +213,16 @@ export function Dashboard() {
               <BarChart3 className="h-5 w-5 text-primary" />
               Productos Más Vendidos
             </CardTitle>
-            <CardDescription>Rendimiento de productos (últimos 30 días)</CardDescription>
+            <CardDescription>
+              Rendimiento de productos (últimos 30 días)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {topProducts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aún no hay ventas suficientes</p>
+                <p className="text-sm text-muted-foreground">
+                  Aún no hay ventas suficientes
+                </p>
               ) : (
                 topProducts.map((product) => (
                   <div
@@ -187,12 +231,21 @@ export function Dashboard() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium text-foreground">{product.name}</p>
-                        <span className="text-sm font-bold text-primary">{currency(product.revenue)}</span>
+                        <p className="font-medium text-foreground">
+                          {product.name}
+                        </p>
+                        <span className="text-sm font-bold text-primary">
+                          {currency(product.revenue)}
+                        </span>
                       </div>
                       <div className="flex items-center gap-4">
-                        <p className="text-sm text-muted-foreground">{product.qty} unidades vendidas</p>
-                        <Progress value={(product.qty / maxSold) * 100} className="flex-1 h-2" />
+                        <p className="text-sm text-muted-foreground">
+                          {product.qty} unidades vendidas
+                        </p>
+                        <Progress
+                          value={(product.qty / maxSold) * 100}
+                          className="flex-1 h-2"
+                        />
                       </div>
                     </div>
                   </div>
@@ -203,10 +256,13 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* Acciones rápidas */}
       <Card className="premium-card">
         <CardHeader>
           <CardTitle>Acciones Rápidas</CardTitle>
-          <CardDescription>Funciones frecuentemente utilizadas para gestión diaria</CardDescription>
+          <CardDescription>
+            Funciones frecuentemente utilizadas para gestión diaria
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -217,6 +273,7 @@ export function Dashboard() {
               <ShoppingCart className="h-6 w-6" />
               <span>Nueva Venta</span>
             </Button>
+
             <Button
               variant="outline"
               className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
@@ -225,14 +282,20 @@ export function Dashboard() {
               <Package className="h-6 w-6" />
               <span>Actualizar Stock</span>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30">
-              <Users className="h-6 w-6" />
-              <span>Gestionar Turnos</span>
-            </Button>
+
             <Button
               variant="outline"
               className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
-              onClick={() => navigate("/ventas")}
+              onClick={() => navigate("/users")}
+            >
+              <Users className="h-6 w-6" />
+              <span>Gestionar Personal</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
+              onClick={() => navigate("/reports")}
             >
               <BarChart3 className="h-6 w-6" />
               <span>Ver Reportes</span>
