@@ -26,7 +26,6 @@ export default function Activation() {
     try {
       await activateLicense(normalizedCode);
       toast.success("Licencia activada correctamente");
-      // Ir al login para que el usuario inicie sesión después de activar
       navigate("/login", { replace: true });
     } catch (err: any) {
       toast.error(err.message || "Error al activar licencia");

@@ -22,6 +22,7 @@ import {
   Eye,
 } from "lucide-react";
 import { fetchDashboardStats, type DashboardStats } from "@/hooks/api";
+import { useSession } from "@/contexts/SessionContext";
 
 const currency = (n: number) =>
   new Intl.NumberFormat("es-CO", {
@@ -33,6 +34,7 @@ const currency = (n: number) =>
 export function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const { user } = useSession();
 
   useEffect(() => {
     (async () => {
@@ -60,31 +62,38 @@ export function Dashboard() {
   const topProducts = stats?.top_products ?? [];
   const maxSold = Math.max(1, ...topProducts.map((p) => p.qty));
 
+  const roleLabel =
+    user?.role === "admin"
+      ? "Administrador General"
+      : `Trabajador / Turno ${user?.shift ?? "N/A"}`;
+
   return (
     <div className="flex-1 space-y-6 p-6 animate-premium-fade">
       {/* Encabezado */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Dashboard
+            INICIO
           </h1>
           <p className="text-muted-foreground">
-            Bienvenido al sistema de gestión
+            SISTEMA DE GESTIÓN LICORERA 
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge className="bg-accent/20 text-accent border-accent/30">
             <Clock className="w-3 h-3 mr-1" />
-            Administrador General
+            {roleLabel}
           </Badge>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/reports")}
-            className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            Ver Reportes
-          </Button>
+          {user?.role === "admin" && (
+            <Button
+              variant="outline"
+              onClick={() => navigate("/reports")}
+              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Ver Reportes
+            </Button>
+          )}
         </div>
       </div>
 
@@ -168,7 +177,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Alertas de inventario y productos más vendidos */}
+      {/* Alertas y top productos */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="glass-card">
           <CardHeader>
@@ -283,23 +292,27 @@ export function Dashboard() {
               <span>Actualizar Stock</span>
             </Button>
 
-            <Button
-              variant="outline"
-              className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
-              onClick={() => navigate("/users")}
-            >
-              <Users className="h-6 w-6" />
-              <span>Gestionar Personal</span>
-            </Button>
+            {user?.role === "admin" && (
+              <>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
+                  onClick={() => navigate("/users")}
+                >
+                  <Users className="h-6 w-6" />
+                  <span>Gestionar Personal</span>
+                </Button>
 
-            <Button
-              variant="outline"
-              className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
-              onClick={() => navigate("/reports")}
-            >
-              <BarChart3 className="h-6 w-6" />
-              <span>Ver Reportes</span>
-            </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
+                  onClick={() => navigate("/reports")}
+                >
+                  <BarChart3 className="h-6 w-6" />
+                  <span>Ver Reportes</span>
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

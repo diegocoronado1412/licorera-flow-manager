@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// licorera-flow-manager/src/pages/Login.tsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logoImage from "@/assets/logo-licorera.jpg";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,23 +9,69 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useSession } from "@/contexts/SessionContext";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useLicense } from "@/contexts/LicenseContext";
 
 export default function Login() {
   const { login } = useSession();
   const { settings } = useSettings();
+  const { isActive, code, expiresAt, daysLeft, activateLicense } = useLicense();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // --- Licencia ---
+  const [licenseVisible, setLicenseVisible] = useState(false);
+  const [licenseCode, setLicenseCode] = useState("");
+  const [licenseLoading, setLicenseLoading] = useState(false);
+  const [dynamicDaysLeft, setDynamicDaysLeft] = useState<number | null>(daysLeft);
+
+  // Actualiza días restantes en tiempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isActive && expiresAt) {
+        const expires = new Date(expiresAt);
+        const now = new Date();
+        const diff = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        setDynamicDaysLeft(diff >= 0 ? diff : 0);
+      }
+    }, 60000); // cada 60 segundos
+
+    return () => clearInterval(interval);
+  }, [isActive, expiresAt]);
+
+  // Formatear fecha a DD/MM/YYYY
+  const formatDate = (isoDate: string) => {
+    const d = new Date(isoDate);
+    return `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getFullYear()}`;
+  };
+
+  async function handleActivateLicense() {
+    if (!licenseCode.trim()) return toast.error("Ingrese un código de licencia");
+    setLicenseLoading(true);
+    try {
+      await activateLicense(licenseCode.trim().toUpperCase());
+      toast.success("Licencia activada correctamente");
+      setLicenseCode("");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al activar licencia");
+    } finally {
+      setLicenseLoading(false);
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!isActive) {
+      return toast.error("No puedes iniciar sesión: la licencia está inactiva o vencida");
+    }
+
     setBusy(true);
     try {
       await login(username, password);
       toast.success("Bienvenido");
-      // Ir a /app (dashboard protegido)
       navigate("/app", { replace: true });
     } catch (err: any) {
       toast.error(err?.message || "No se pudo iniciar sesión");
@@ -33,17 +80,10 @@ export default function Login() {
     }
   }
 
-  // (el resto del diseño es el mismo que tenías)
   const bubbles = [
-    { top: "8%",  left: "10%", size: 120, ampX: "18vw", dur: "24s", delay: "-2s" },
-    { top: "20%", left: "78%", size: 90,  ampX: "15vw", dur: "28s", delay: "-8s" },
-    { top: "66%", left: "7%",  size: 100, ampX: "16vw", dur: "26s", delay: "-11s" },
-    { top: "72%", left: "72%", size: 130, ampX: "20vw", dur: "30s", delay: "-4s" },
-    { top: "38%", left: "50%", size: 70,  ampX: "12vw", dur: "22s", delay: "-14s" },
-    { top: "14%", left: "52%", size: 65,  ampX: "13vw", dur: "32s", delay: "-6s" },
-    { top: "82%", left: "36%", size: 95,  ampX: "14vw", dur: "28s", delay: "-16s" },
-    { top: "30%", left: "24%", size: 75,  ampX: "11vw", dur: "25s", delay: "-10s" },
-    { top: "54%", left: "85%", size: 80,  ampX: "13vw", dur: "27s", delay: "-18s" },
+    { top: "8%", left: "10%", size: 120, ampX: "18vw", dur: "24s", delay: "-2s" },
+    { top: "20%", left: "78%", size: 90, ampX: "15vw", dur: "28s", delay: "-8s" },
+    { top: "66%", left: "7%", size: 100, ampX: "16vw", dur: "26s", delay: "-11s" },
   ];
 
   return (
@@ -56,22 +96,20 @@ export default function Login() {
             src={logoImage}
             alt="bubble"
             className="absolute rounded-full shadow-2xl bubble-move"
-            style={
-              {
-                top: b.top,
-                left: b.left,
-                width: `${b.size}px`,
-                height: `${b.size}px`,
-                ["--amp-x" as any]: b.ampX,
-                ["--dur" as any]: b.dur,
-                ["--delay" as any]: b.delay,
-              } as React.CSSProperties
-            }
+            style={{
+              top: b.top,
+              left: b.left,
+              width: `${b.size}px`,
+              height: `${b.size}px`,
+              ["--amp-x" as any]: b.ampX,
+              ["--dur" as any]: b.dur,
+              ["--delay" as any]: b.delay,
+            } as React.CSSProperties}
           />
         ))}
       </div>
 
-      <div className="relative z-10 w-[min(92vw,440px)] px-2">
+      <div className="relative z-10 w-[min(92vw,440px)] px-2 space-y-4">
         <Card className="backdrop-blur supports-[backdrop-filter]:bg-background/70 border-border/60">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 rounded-xl overflow-hidden shadow-md">
@@ -110,10 +148,48 @@ export default function Login() {
                 {busy ? "Ingresando…" : "Ingresar"}
               </Button>
 
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                Inicia sesión
-              </p>
+              <p className="text-[11px] text-muted-foreground mt-2 text-center">Inicia sesión</p>
             </form>
+
+            {/* --- Licencia --- */}
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLicenseVisible(v => !v)}
+              >
+                {licenseVisible ? "Ocultar licencia" : "Ver licencia"}
+              </Button>
+
+              {licenseVisible && (
+                <div className="mt-2 p-3 border rounded bg-background/80 space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    Estado: {isActive ? "✅ Activa" : "🔒 Inactiva"}
+                  </div>
+                  {isActive && (
+                    <div className="text-xs text-muted-foreground">
+                      Tipo: {code ?? "-"} <br />
+                      Expira: {expiresAt ? formatDate(expiresAt) : "—"} <br />
+                      Días restantes: {dynamicDaysLeft ?? "—"}
+                    </div>
+                  )}
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <Input
+                      placeholder="Código de licencia"
+                      value={licenseCode}
+                      onChange={e => setLicenseCode(e.target.value)}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleActivateLicense}
+                      disabled={licenseLoading}
+                    >
+                      Activar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -44,15 +44,13 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  // Filtrado de items según role (robusto)
   const role = (user?.role || "").toString().toLowerCase();
   const navigationItems = ALL_NAV_ITEMS.filter((it) => {
-    if (!user) return true; // si no hay user (caso raro), mostramos algo
+    if (!user) return true;
     if (role === "admin") return true;
     if (role === "cashier") {
       return ["dashboard", "pos", "inventory"].includes(it.key);
     }
-    // fallback conservador
     return it.key === "dashboard";
   });
 
@@ -154,6 +152,7 @@ export function AppSidebar() {
           {open && (
             <div className="text-xs text-muted-foreground animate-premium-fade">
               <p className="font-medium text-primary">Usuario: {user?.name ?? "—"}</p>
+              <p className="text-[11px] text-muted-foreground">{user ? `Rol: ${user.role}` : ""}</p>
             </div>
           )}
           <Button
@@ -170,6 +169,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-
-

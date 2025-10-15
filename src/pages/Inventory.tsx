@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,13 +47,13 @@ const formatCurrency = (n: number) =>
 
 function inferCategory(name: string): string {
   const n = name.toLowerCase();
-  if (/(whisky|old\s*par|something\s*special)/.test(n)) return "Whisky";
-  if (/(ron|medellín|aguardiente|bacardí|flor)/.test(n)) return "Licores";
-  if (/(cerveza|pilsen|poker|corona|stella|club colombia|budweiser|costeñita)/.test(n)) return "Cervezas";
-  if (/(tequila|1800|don julio|mezcal)/.test(n)) return "Tequila";
-  if (/(vodka|smirn(o|f)f|absolut)/.test(n)) return "Vodka";
-  if (/(gaseosa|coca|bretaña|hit)/.test(n)) return "Bebidas";
-  if (/(snack|papas|detoditos|choclitos|boliqueso)/.test(n)) return "Snacks";
+  if (/(whisky|old\s*par)/.test(n)) return "Whisky";
+  if (/(ron|aguardiente|bacardí|flor)/.test(n)) return "Licores";
+  if (/(cerveza|pilsen|corona|stella|club colombia|budweiser)/.test(n)) return "Cervezas";
+  if (/(tequila|mezcal)/.test(n)) return "Tequila";
+  if (/(vodka|smirn|absolut)/.test(n)) return "Vodka";
+  if (/(gaseosa|coca|hit)/.test(n)) return "Bebidas";
+  if (/(snack|papas|detoditos)/.test(n)) return "Snacks";
   return "General";
 }
 
@@ -76,7 +76,7 @@ function toRow(p: ApiProduct): Row {
 
 function StockBadge({ qty }: { qty: number }) {
   if (qty === 0) return <Badge variant="destructive" className="text-xs">Agotado</Badge>;
-  if (qty <= 5)  return <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600 text-xs">Bajo</Badge>;
+  if (qty <= 5) return <Badge variant="destructive" className="bg-orange-500 hover:bg-orange-600 text-xs">Bajo</Badge>;
   if (qty <= 20) return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs">Medio</Badge>;
   return <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-xs">Alto</Badge>;
 }
@@ -93,7 +93,8 @@ export default function Inventory() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
-  const [form, setForm] = useState({ name: "", price: "", cost: "", stock: "" });
+  // <-- agregado finalCount en el form (solo cambio mínimo)
+  const [form, setForm] = useState({ name: "", price: "", cost: "", newStock: "", finalCount: "" });
 
   const [openNew, setOpenNew] = useState(false);
   const [newForm, setNewForm] = useState({ name: "", price: "", cost: "", stock: "" });
@@ -133,13 +134,15 @@ export default function Inventory() {
   const totalProfitValue = filtered.reduce((s, x) => s + x.profit, 0);
 
   function onEditClick(r: Row) {
-    if (!isAdmin) return; // seguridad extra en UI
+    if (!isAdmin) return;
     setEditing(r);
+    // <-- seteamos finalCount en el form (solo cambio mínimo)
     setForm({
       name: r.name,
       price: r.salePrice.toString(),
       cost: r.costPerUnit.toString(),
-      stock: r.finalCount.toString(),
+      newStock: "",
+      finalCount: r.finalCount.toString(),
     });
     setOpen(true);
   }
@@ -159,29 +162,43 @@ export default function Inventory() {
       return;
     }
     try {
-      const newName  = newFormValue(form.name);
+      const newName = newFormValue(form.name);
       const newPrice = numberOrZero(form.price);
-      const newCost  = numberOrZero(form.cost);
+      const newCost = numberOrZero(form.cost);
+      const newStockAdd = numberOrZero(form.newStock);
+      // <-- leemos manualStock desde el form (solo cambio mínimo)
+      const manualStock = numberOrZero(form.finalCount);
 
+      // calculamos stock final: si admin editó manualStock, partimos de ese; sino partimos del editing.finalCount
+      let finalStock = editing.finalCount;
+      if (manualStock !== editing.finalCount) {
+        finalStock = manualStock;
+      }
+
+      // si además se agregó nuevo ingreso lo sumamos
+      if (newStockAdd > 0) {
+        finalStock += newStockAdd;
+      }
+
+      // actualizamos los campos básicos
       await updateProduct(editing.id, {
         name: newName,
         price: newPrice,
         cost_per_unit: newCost,
+        // <-- incluimos stock final solo si cambió (mínimo cambio)
+        ...(finalStock !== editing.finalCount ? { stock: finalStock } : {}),
       });
 
-      const newStock = numberOrZero(form.stock);
-      const delta = newStock - editing.finalCount;
-      if (delta !== 0) {
-        await adjustStock(editing.id, delta, "ajuste desde pantalla Inventario");
-      }
+      // Si la API separa ajustes en adjustStock para llevar historial, puedes querer usar adjustStock en su lugar.
+      // Mantuvimos updateProduct con stock para cambiar lo menos posible del flujo original.
 
-      toast.success("Producto actualizado");
+      toast.success(`Producto actualizado correctamente (nuevo stock: ${finalStock})`);
       setOpen(false);
       setEditing(null);
       await load(searchTerm);
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message || "No se pudo actualizar");
+      toast.error(e?.message || "No se pudo actualizar el producto");
     }
   }
 
@@ -191,9 +208,9 @@ export default function Inventory() {
       return;
     }
     try {
-      const name  = newFormValue(newForm.name);
+      const name = newFormValue(newForm.name);
       const price = numberOrZero(newForm.price);
-      const cost  = numberOrZero(newForm.cost);
+      const cost = numberOrZero(newForm.cost);
       const stock = numberOrZero(newForm.stock);
 
       if (!name) {
@@ -248,6 +265,7 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* === Tarjetas resumen === */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -294,39 +312,7 @@ export default function Inventory() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros de Inventario</CardTitle>
-          <CardDescription>Busca y filtra productos por categoría</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar productos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((c) => (
-                <Button
-                  key={c}
-                  variant={selectedCategory === c ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(c)}
-                  className="text-xs"
-                >
-                  {c}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* === Tabla === */}
       <Card>
         <CardHeader>
           <CardTitle>Inventario Detallado</CardTitle>
@@ -337,15 +323,15 @@ export default function Inventory() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-muted/50">
-                  <TableHead className="font-semibold">Producto</TableHead>
-                  <TableHead className="font-semibold">Categoría</TableHead>
-                  <TableHead className="font-semibold text-center">Stock</TableHead>
-                  <TableHead className="font-semibold text-center">Estado</TableHead>
-                  <TableHead className="font-semibold text-right">Costo Unit.</TableHead>
-                  <TableHead className="font-semibold text-right">Precio</TableHead>
-                  <TableHead className="font-semibold text-right">Valor Inv.</TableHead>
-                  <TableHead className="font-semibold text-right">Utilidad</TableHead>
-                  <TableHead className="font-semibold text-right w-[120px]">Acciones</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead className="text-center">Stock</TableHead>
+                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead className="text-right">Costo Unit.</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
+                  <TableHead className="text-right">Valor Inv.</TableHead>
+                  <TableHead className="text-right">Utilidad</TableHead>
+                  <TableHead className="text-right w-[120px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -420,6 +406,7 @@ export default function Inventory() {
         </CardContent>
       </Card>
 
+      {/* === Diálogo editar === */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
@@ -442,11 +429,30 @@ export default function Inventory() {
               <Input type="number" className="col-span-3" value={form.cost}
                      onChange={(e) => setForm(f => ({ ...f, cost: e.target.value }))}/>
             </div>
-            <div className="grid grid-cols-4 items-center gap-3">
-              <Label className="text-right">Stock</Label>
-              <Input type="number" className="col-span-3" value={form.stock}
-                     onChange={(e) => setForm(f => ({ ...f, stock: e.target.value }))}/>
-            </div>
+
+            {editing && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-3">
+                  <Label className="text-right">Stock actual</Label>
+                  {/* <-- AQUÍ está el cambio mínimo: usamos form.finalCount y permitimos editar si isAdmin */}
+                  <Input
+                    type="number"
+                    className={`col-span-3 ${!isAdmin ? "bg-muted cursor-not-allowed" : ""}`}
+                    value={form.finalCount}
+                    readOnly={!isAdmin}
+                    onChange={(e) => {
+                      if (isAdmin) setForm(f => ({ ...f, finalCount: e.target.value }));
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-3">
+                  <Label className="text-right">Nuevo ingreso</Label>
+                  <Input type="number" className="col-span-3" value={form.newStock}
+                         placeholder="Ej: 50"
+                         onChange={(e) => setForm(f => ({ ...f, newStock: e.target.value }))}/>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>
@@ -456,6 +462,7 @@ export default function Inventory() {
         </DialogContent>
       </Dialog>
 
+      {/* === Diálogo nuevo === */}
       <Dialog open={openNew} onOpenChange={setOpenNew}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>

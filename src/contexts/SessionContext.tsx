@@ -1,21 +1,21 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type Role = "admin" | "cashier";
-export type Shift = "Mañana" | "Tarde" | "Noche";
+export type Shift = "Mañana" | "Tarde" | "Noche" | null;
 
 export type SessionUser = {
   id: string;
   name: string;
   role: Role;
-  shift: Shift | null;
+  shift: Shift;
 };
 
 type SessionCtx = {
   user: SessionUser | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  switchUser: (id: string) => void;
-  quickLogin: (id: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<SessionUser>;
+  switchUser: (id: string) => SessionUser | undefined;
+  quickLogin: (id: string) => Promise<SessionUser>;
   logout: () => void;
   usersList: SessionUser[];
 };
@@ -42,49 +42,60 @@ const USERS: Record<string, { password: string; user: SessionUser }> = {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
 
+  // 🔹 Cargar sesión al iniciar
   useEffect(() => {
     try {
       const id = localStorage.getItem(STORAGE_KEY);
       if (id && USERS[id]?.user) {
-        // DEBUG: se puede comentar/retirar en producción
-        console.log("[Session] load from storage:", id, USERS[id].user);
         setUser(USERS[id].user);
-      } else {
-        console.log("[Session] no user in storage");
       }
-    } catch (err) {
-      console.warn("[Session] error reading storage", err);
+    } catch {
+      // ignorar errores de almacenamiento
     }
   }, []);
 
-  async function login(username: string, password: string) {
+  // 🔹 Iniciar sesión
+  async function login(username: string, password: string): Promise<SessionUser> {
     const key = (username || "").trim().toUpperCase();
     const item = USERS[key];
     if (!item || item.password !== password) {
-      console.log("[Session] login failed for", key);
       throw new Error("Usuario o contraseña incorrectos");
     }
-    console.log("[Session] login success:", item.user);
-    setUser(item.user);
+
     localStorage.setItem(STORAGE_KEY, item.user.id);
+    setUser(item.user);
+
+    // Esperar un breve instante para asegurar sincronización con el contexto
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    return item.user;
   }
 
-  function switchUser(id: string) {
+  // 🔹 Cambiar usuario (modo rápido)
+  function switchUser(id: string): SessionUser | undefined {
     const key = (id || "").trim().toUpperCase();
     const item = USERS[key];
     if (!item) return;
-    setUser(item.user);
     localStorage.setItem(STORAGE_KEY, item.user.id);
+    setUser(item.user);
+    return item.user;
   }
 
-  async function quickLogin(id: string) {
+  // 🔹 Ingreso directo por ID
+  async function quickLogin(id: string): Promise<SessionUser> {
     const key = (id || "").trim().toUpperCase();
     const item = USERS[key];
     if (!item) throw new Error("Usuario no encontrado");
-    setUser(item.user);
+
     localStorage.setItem(STORAGE_KEY, item.user.id);
+    setUser(item.user);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    return item.user;
   }
 
+  // 🔹 Cerrar sesión
   function logout() {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);

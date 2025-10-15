@@ -19,7 +19,7 @@ import ReportsPage from "./pages/ReportsPage";
 import Activation from "./pages/Activation";
 
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import { SessionProvider, useSession } from "@/contexts/SessionContext";
+import { SessionProvider } from "@/contexts/SessionContext";
 import { LicenseProvider, useLicense } from "@/contexts/LicenseContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -27,9 +27,7 @@ const queryClient = new QueryClient();
 
 function AppRoutes() {
   const { isActive } = useLicense();
-  const { user } = useSession(); // opcional para decisiones UI role-based
 
-  // Si la licencia no está activa, sólo mostramos la activación
   if (!isActive) {
     return (
       <Routes>
@@ -38,16 +36,11 @@ function AppRoutes() {
     );
   }
 
-  // Si la licencia está activa, dejamos /login público y hacemos la app en /app
   return (
     <Routes>
-      {/* Ruta pública de login */}
       <Route path="/login" element={<Login />} />
-
-      {/* Si el usuario visita / (root) redirigimos a /login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Layout principal protegido */}
       <Route
         path="*"
         element={
