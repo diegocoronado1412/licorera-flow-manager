@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,14 @@ import { toast } from "sonner";
 export default function Activation() {
   const { activateLicense, isActive } = useLicense();
   const [code, setCode] = useState("");
+  const navigate = useNavigate();
+
+  // ⬅️ Si la licencia ya está activa, redirigir automáticamente al login
+  useEffect(() => {
+    if (isActive) {
+      navigate("/login");
+    }
+  }, [isActive, navigate]);
 
   async function handleActivate() {
     if (isActive) {
@@ -24,6 +33,8 @@ export default function Activation() {
     try {
       await activateLicense(normalizedCode);
       toast.success("Licencia activada correctamente");
+      // 🔁 Redirigir manualmente al login tras activación exitosa
+      navigate("/login");
     } catch (err: any) {
       toast.error(err.message || "Error al activar licencia");
     }

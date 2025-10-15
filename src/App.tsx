@@ -18,20 +18,20 @@ import SettingsPage from "./pages/Settings";
 import Login from "./pages/Login";
 import UsersPage from "./pages/Users";
 import ReportsPage from "./pages/ReportsPage";
-import Activation from "./pages/Activation"; // ⬅️ nueva página
+import Activation from "./pages/Activation"; // Página de activación
 
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SessionProvider } from "@/contexts/SessionContext";
-import { LicenseProvider, useLicense } from "@/contexts/LicenseContext"; // ⬅️ licencia
+import { LicenseProvider, useLicense } from "@/contexts/LicenseContext"; // Contexto de licencia
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// --- Subcomponente para manejar las rutas según la licencia ---
+// --- Subcomponente que maneja las rutas según la licencia ---
 function AppRoutes() {
   const { isActive } = useLicense();
 
-  // Si la licencia no está activa, solo muestra la pantalla de activación
+  // 🔒 Si la licencia NO está activa, solo permite la página de activación
   if (!isActive) {
     return (
       <Routes>
@@ -40,7 +40,7 @@ function AppRoutes() {
     );
   }
 
-  // Si la licencia está activa, carga el sistema normal
+  // ✅ Si la licencia está activa, carga el sistema normalmente
   return (
     <Routes>
       {/* Rutas públicas */}
@@ -120,7 +120,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <LicenseProvider> {/* ⬅️ envolvemos toda la app */}
+        <LicenseProvider> {/* ⬅️ Envuelve toda la app con la licencia */}
           <SettingsProvider>
             <SidebarProvider defaultOpen={true}>
               <SessionProvider>
