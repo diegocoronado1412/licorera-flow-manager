@@ -24,7 +24,8 @@ export default function Login() {
     try {
       await login(username, password);
       toast.success("Bienvenido");
-      navigate("/", { replace: true });
+      // Ir a /app (dashboard protegido)
+      navigate("/app", { replace: true });
     } catch (err: any) {
       toast.error(err?.message || "No se pudo iniciar sesión");
     } finally {
@@ -32,7 +33,7 @@ export default function Login() {
     }
   }
 
-  // Burbujas (posición, tamaño, amplitud, duración)
+  // (el resto del diseño es el mismo que tenías)
   const bubbles = [
     { top: "8%",  left: "10%", size: 120, ampX: "18vw", dur: "24s", delay: "-2s" },
     { top: "20%", left: "78%", size: 90,  ampX: "15vw", dur: "28s", delay: "-8s" },
@@ -46,9 +47,7 @@ export default function Login() {
   ];
 
   return (
-    // FONDO A PANTALLA COMPLETA + CARD CENTRADO
     <div className="fixed inset-0 grid place-items-center bg-background overflow-hidden">
-      {/* Fondo con burbujas */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/10" />
         {bubbles.map((b, i) => (
@@ -72,7 +71,6 @@ export default function Login() {
         ))}
       </div>
 
-      {/* Contenido centrado */}
       <div className="relative z-10 w-[min(92vw,440px)] px-2">
         <Card className="backdrop-blur supports-[backdrop-filter]:bg-background/70 border-border/60">
           <CardHeader className="text-center">
@@ -120,7 +118,6 @@ export default function Login() {
         </Card>
       </div>
 
-      {/* CSS de animación */}
       <style>{`
         @keyframes float-x {
           from { transform: translateX(calc(var(--amp-x) * -1)); }

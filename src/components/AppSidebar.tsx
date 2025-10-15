@@ -26,13 +26,12 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useSession } from "@/contexts/SessionContext";
 import { useToast } from "@/hooks/use-toast";
 
-const navigationItems = [
-  { title: "Dashboard", url: "/", icon: Home },
-  { title: "Punto de Venta", url: "/pos", icon: ShoppingCart },
-  { title: "Inventario", url: "/inventory", icon: Package },
-  { title: "Personal", url: "/users", icon: Users },
-  { title: "Reportes", url: "/reports", icon: BarChart3 },
-  // Se eliminó el item de "Turnos"
+const ALL_NAV_ITEMS = [
+  { title: "Dashboard", url: "/app", icon: Home, key: "dashboard" },
+  { title: "Punto de Venta", url: "/app/pos", icon: ShoppingCart, key: "pos" },
+  { title: "Inventario", url: "/app/inventory", icon: Package, key: "inventory" },
+  { title: "Personal", url: "/app/users", icon: Users, key: "users" },
+  { title: "Reportes", url: "/app/reports", icon: BarChart3, key: "reports" },
 ];
 
 export function AppSidebar() {
@@ -43,7 +42,19 @@ export function AppSidebar() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname.startsWith(path);
+
+  // Filtrado de items según role (robusto)
+  const role = (user?.role || "").toString().toLowerCase();
+  const navigationItems = ALL_NAV_ITEMS.filter((it) => {
+    if (!user) return true; // si no hay user (caso raro), mostramos algo
+    if (role === "admin") return true;
+    if (role === "cashier") {
+      return ["dashboard", "pos", "inventory"].includes(it.key);
+    }
+    // fallback conservador
+    return it.key === "dashboard";
+  });
 
   const handleLogout = () => {
     logout();
@@ -98,14 +109,8 @@ export function AppSidebar() {
                         ${!open ? "justify-center" : ""}
                       `}
                     >
-                      <item.icon
-                        className={`h-5 w-5 ${
-                          isActive(item.url) && "animate-neon-pulse"
-                        }`}
-                      />
-                      {open && (
-                        <span className="animate-premium-fade">{item.title}</span>
-                      )}
+                      <item.icon className={`h-5 w-5 ${isActive(item.url) && "animate-neon-pulse"}`} />
+                      {open && <span className="animate-premium-fade">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -123,7 +128,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <NavLink
-                    to="/settings"
+                    to="/app/settings"
                     className={({ isActive: navActive }) => `
                       flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200
                       ${
@@ -135,9 +140,7 @@ export function AppSidebar() {
                     `}
                   >
                     <SettingsIcon className="h-5 w-5" />
-                    {open && (
-                      <span className="animate-premium-fade">Configuración</span>
-                    )}
+                    {open && <span className="animate-premium-fade">Configuración</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -150,10 +153,7 @@ export function AppSidebar() {
         <div className="space-y-2">
           {open && (
             <div className="text-xs text-muted-foreground animate-premium-fade">
-              <p className="font-medium text-primary">
-                Usuario: {user?.name ?? "—"}
-              </p>
-              {/* Se quitó la línea del turno */}
+              <p className="font-medium text-primary">Usuario: {user?.name ?? "—"}</p>
             </div>
           )}
           <Button
@@ -170,3 +170,6 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+
+

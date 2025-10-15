@@ -1,10 +1,8 @@
-// LICORERA/licorera-flow-manager/src/App.tsx
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 import { AppSidebar } from "@/components/AppSidebar";
@@ -18,20 +16,20 @@ import SettingsPage from "./pages/Settings";
 import Login from "./pages/Login";
 import UsersPage from "./pages/Users";
 import ReportsPage from "./pages/ReportsPage";
-import Activation from "./pages/Activation"; // Página de activación
+import Activation from "./pages/Activation";
 
 import { SettingsProvider } from "@/contexts/SettingsContext";
-import { SessionProvider } from "@/contexts/SessionContext";
-import { LicenseProvider, useLicense } from "@/contexts/LicenseContext"; // Contexto de licencia
+import { SessionProvider, useSession } from "@/contexts/SessionContext";
+import { LicenseProvider, useLicense } from "@/contexts/LicenseContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-// --- Subcomponente que maneja las rutas según la licencia ---
 function AppRoutes() {
   const { isActive } = useLicense();
+  const { user } = useSession(); // opcional para decisiones UI role-based
 
-  // 🔒 Si la licencia NO está activa, solo permite la página de activación
+  // Si la licencia no está activa, sólo mostramos la activación
   if (!isActive) {
     return (
       <Routes>
@@ -40,11 +38,14 @@ function AppRoutes() {
     );
   }
 
-  // ✅ Si la licencia está activa, carga el sistema normalmente
+  // Si la licencia está activa, dejamos /login público y hacemos la app en /app
   return (
     <Routes>
-      {/* Rutas públicas */}
+      {/* Ruta pública de login */}
       <Route path="/login" element={<Login />} />
+
+      {/* Si el usuario visita / (root) redirigimos a /login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Layout principal protegido */}
       <Route
@@ -56,7 +57,7 @@ function AppRoutes() {
               <AppHeader />
               <Routes>
                 <Route
-                  path="/"
+                  path="/app"
                   element={
                     <ProtectedRoute>
                       <Index />
@@ -64,7 +65,7 @@ function AppRoutes() {
                   }
                 />
                 <Route
-                  path="/inventory"
+                  path="/app/inventory"
                   element={
                     <ProtectedRoute>
                       <Inventory />
@@ -72,7 +73,7 @@ function AppRoutes() {
                   }
                 />
                 <Route
-                  path="/pos"
+                  path="/app/pos"
                   element={
                     <ProtectedRoute>
                       <POS />
@@ -80,7 +81,7 @@ function AppRoutes() {
                   }
                 />
                 <Route
-                  path="/settings"
+                  path="/app/settings"
                   element={
                     <ProtectedRoute>
                       <SettingsPage />
@@ -88,7 +89,7 @@ function AppRoutes() {
                   }
                 />
                 <Route
-                  path="/users"
+                  path="/app/users"
                   element={
                     <ProtectedRoute>
                       <UsersPage />
@@ -96,7 +97,7 @@ function AppRoutes() {
                   }
                 />
                 <Route
-                  path="/reports"
+                  path="/app/reports"
                   element={
                     <ProtectedRoute>
                       <ReportsPage />
@@ -113,14 +114,13 @@ function AppRoutes() {
   );
 }
 
-// --- App principal ---
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <LicenseProvider> {/* ⬅️ Envuelve toda la app con la licencia */}
+        <LicenseProvider>
           <SettingsProvider>
             <SidebarProvider defaultOpen={true}>
               <SessionProvider>

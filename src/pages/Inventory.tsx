@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,14 +28,15 @@ import {
   createProduct,
   deleteProduct,
 } from "../hooks/api";
+import { useSession } from "@/contexts/SessionContext";
 
 type Row = {
   id: number;
   name: string;
   category: string;
-  finalCount: number;  
-  costPerUnit: number; 
-  salePrice: number;    
+  finalCount: number;
+  costPerUnit: number;
+  salePrice: number;
   totalCost: number;
   totalSales: number;
   profit: number;
@@ -81,6 +82,9 @@ function StockBadge({ qty }: { qty: number }) {
 }
 
 export default function Inventory() {
+  const { user } = useSession();
+  const isAdmin = user?.role === "admin";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [rows, setRows] = useState<Row[]>([]);
@@ -107,6 +111,7 @@ export default function Inventory() {
       setLoading(false);
     }
   }
+
   useEffect(() => { load(searchTerm); }, [searchTerm]);
 
   const categories = useMemo(() => {
@@ -124,10 +129,11 @@ export default function Inventory() {
   }, [rows, searchTerm, selectedCategory]);
 
   const totalInventoryValue = filtered.reduce((s, x) => s + x.totalCost, 0);
-  const totalSalesValue     = filtered.reduce((s, x) => s + x.totalSales, 0);
-  const totalProfitValue    = filtered.reduce((s, x) => s + x.profit, 0);
+  const totalSalesValue = filtered.reduce((s, x) => s + x.totalSales, 0);
+  const totalProfitValue = filtered.reduce((s, x) => s + x.profit, 0);
 
   function onEditClick(r: Row) {
+    if (!isAdmin) return; // seguridad extra en UI
     setEditing(r);
     setForm({
       name: r.name,
@@ -144,10 +150,14 @@ export default function Inventory() {
   function numberOrZero(v: string) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
-    }
+  }
 
   async function onSave() {
     if (!editing) return;
+    if (!isAdmin) {
+      toast.error("No tienes permisos para editar");
+      return;
+    }
     try {
       const newName  = newFormValue(form.name);
       const newPrice = numberOrZero(form.price);
@@ -176,6 +186,10 @@ export default function Inventory() {
   }
 
   async function onCreate() {
+    if (!isAdmin) {
+      toast.error("No tienes permisos para crear productos");
+      return;
+    }
     try {
       const name  = newFormValue(newForm.name);
       const price = numberOrZero(newForm.price);
@@ -199,6 +213,10 @@ export default function Inventory() {
   }
 
   async function handleDelete(id: number) {
+    if (!isAdmin) {
+      toast.error("No tienes permisos para eliminar");
+      return;
+    }
     try {
       await deleteProduct(id);
       toast.success("Producto eliminado");
@@ -221,10 +239,12 @@ export default function Inventory() {
           {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setOpenNew(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            Nuevo Producto
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setOpenNew(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Nuevo Producto
+            </Button>
+          )}
         </div>
       </div>
 
@@ -351,39 +371,45 @@ export default function Inventory() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => onEditClick(p)}>
-                          <Pencil className="w-4 h-4 mr-1" /> Editar
-                        </Button>
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              aria-label="Eliminar"
-                              title="Eliminar"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              <span className="sr-only">Eliminar</span>
+                        {isAdmin ? (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => onEditClick(p)}>
+                              <Pencil className="w-4 h-4 mr-1" /> Editar
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar “{p.name}”?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción es permanente. Si el producto tiene ventas o ajustes previos,
-                                no se permitirá eliminar para preservar el historial.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(p.id)}>
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  aria-label="Eliminar"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span className="sr-only">Eliminar</span>
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Eliminar “{p.name}”?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción es permanente. Si el producto tiene ventas o ajustes previos,
+                                    no se permitirá eliminar para preservar el historial.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(p.id)}>
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sin permisos</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -424,13 +450,12 @@ export default function Inventory() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setOpen(false); setEditing(null); }}>Cancelar</Button>
             <Button onClick={onSave}>Guardar cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal nuevo */}
       <Dialog open={openNew} onOpenChange={setOpenNew}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
@@ -462,7 +487,7 @@ export default function Inventory() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenNew(false)}>Cancelar</Button>
-            <Button onClick={onCreate}>Crear</Button>
+            <Button onClick={onCreate} disabled={!isAdmin}>Crear</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
