@@ -68,6 +68,16 @@
   }
 
   .light {
+    
+    --gradient-primary: linear-gradient(135deg, hsl(45 100% 65%), hsl(35 100% 55%));
+    --gradient-neon: linear-gradient(135deg, hsl(120 80% 55%), hsl(140 80% 45%));
+    --gradient-dark: linear-gradient(135deg, hsl(45 50% 98%), hsl(45 30% 92%));
+    --gradient-card: linear-gradient(135deg, hsl(45 40% 96%), hsl(45 35% 90%));
+
+    --shadow-premium: 0 20px 40px -12px hsl(45 100% 45% / 0.2), 0 0 0 1px hsl(45 100% 45% / 0.05);
+    --shadow-neon: 0 0 30px hsl(120 80% 45% / 0.2), 0 10px 20px hsl(45 50% 98% / 0.4);
+    --shadow-dark: 0 10px 30px -10px hsl(220 10% 80% / 0.4);
+
     --background: 45 50% 98%;
     --foreground: 220 25% 15%;
 

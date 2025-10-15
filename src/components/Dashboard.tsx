@@ -85,14 +85,15 @@ export function Dashboard() {
             {roleLabel}
           </Badge>
           {user?.role === "admin" && (
-            <Button
-              variant="outline"
-              onClick={() => navigate("/reports")}
-              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Ver Reportes
-            </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/app/reports")}
+            className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Ver Reportes
+          </Button>
+
           )}
         </div>
       </div>
@@ -303,14 +304,14 @@ export function Dashboard() {
                   <span>Gestionar Personal</span>
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
-                  onClick={() => navigate("/reports")}
-                >
-                  <BarChart3 className="h-6 w-6" />
-                  <span>Ver Reportes</span>
-                </Button>
+               <Button
+                variant="outline"
+                className="h-20 flex-col gap-2 hover:bg-accent/20 hover:text-accent hover:border-accent/30"
+                onClick={() => navigate("/app/reports")}
+              >
+                <BarChart3 className="h-6 w-6" />
+                <span>Ver Reportes</span>
+              </Button>
               </>
             )}
           </div>
