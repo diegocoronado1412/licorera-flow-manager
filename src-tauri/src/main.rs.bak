@@ -1,0 +1,26 @@
+﻿#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::process::{Command, Stdio};
+use tauri::Manager;
+
+fn main() {
+    // Iniciar el backend FastAPI
+    Command::new("python")
+        .args(["../backend/main.py"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("Error al iniciar el backend Python");
+
+    // Crear ventana principal
+    tauri::Builder::default()
+        .setup(|app| {
+            let main_window = app.get_webview_window("main").unwrap();
+            main_window.set_title("Licorera Flow Manager").unwrap();
+            Ok(())
+        })
+        .run(tauri::generate_context!())
+        .expect("Error al iniciar la aplicaciÃ³n Tauri");
+}
+
+
+
