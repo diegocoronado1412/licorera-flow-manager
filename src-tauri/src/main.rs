@@ -19,7 +19,7 @@ fn exe_dir() -> Result<PathBuf, Box<dyn Error>> {
 }
 
 /// Intenta localizar un archivo relativo comprobando varias ubicaciones comunes
-/// rel: ejemplo "assets/licorera.db" o "backend/main.py"
+/// rel: ejemplo "assets/licorera.db" o "backend-api.exe"
 fn locate_rel(rel: &str) -> Option<PathBuf> {
     // candidatas basadas en exe_dir y cwd
     if let Ok(ed) = exe_dir() {
@@ -51,7 +51,6 @@ fn locate_rel(rel: &str) -> Option<PathBuf> {
 }
 
 /// Copia la DB empaquetada a APPDATA y al exe_dir (si existe)
-/* retorna la ruta origen usada */
 fn copy_db_to_places() -> Result<PathBuf, Box<dyn Error>> {
     // posibles localizaciones del archivo licorera.db
     let rel = "assets/licorera.db";
@@ -73,111 +72,93 @@ fn copy_db_to_places() -> Result<PathBuf, Box<dyn Error>> {
         let _ = fs::copy(&res_path, &exe_dest);
     }
 
-    // Copiar a backend si existe
-    let backend_dir = exe_d.join("backend");
-    if backend_dir.exists() && backend_dir.is_dir() {
-        let backend_dest = backend_dir.join("licorera.db");
-        if !backend_dest.exists() {
-            let _ = fs::copy(&res_path, &backend_dest);
-        }
-    }
-
     println!("DB usada: {}", res_path.display());
     println!("Copiada a APPDATA: {}", app_dest.display());
     println!("Copia en exe_dir intentada: {}", exe_dest.display());
-    if backend_dir.exists() {
-        println!("Copia en backend intentada: {}", backend_dir.join("licorera.db").display());
-    }
 
     Ok(res_path)
 }
 
-/// Arranca el backend (prefiere main.exe si existe, si no main.py).
-/// Redirige stdout/stderr a archivos en el exe_dir para depuración en release.
+/// Arranca el backend (busca backend-api.exe empaquetado)
 fn spawn_backend_process() -> Result<(), Box<dyn Error>> {
     let exe_d = exe_dir()?;
 
-    // candidatas ampliadas (incluye resources/backend/dist/main.exe)
+    // Candidatas para encontrar backend-api.exe
     let candidates = [
-        exe_d.join("resources").join("backend").join("dist").join("main.exe"),
-        exe_d.join("resources").join("backend").join("main.py"),
-        exe_d.join("resources").join("backend").join("main.exe"),
-        exe_d.join("backend").join("dist").join("main.exe"),
-        exe_d.join("backend").join("main.exe"),
-        exe_d.join("..").join("backend").join("dist").join("main.exe"),
-        exe_d.join("..").join("backend").join("main.py"),
-        exe_d.join("..").join("backend").join("main.exe"),
-        exe_d.join("..").join("..").join("backend").join("dist").join("main.exe"),
-        exe_d.join("..").join("..").join("backend").join("main.py"),
-        env::current_dir()?.join("backend").join("main.py"),
-        PathBuf::from(r"C:\Users\coron\Desktop\LICORERA\backend\main.py"),
+        exe_d.join("backend-api.exe"),                              // junto al exe principal
+        exe_d.join("resources").join("backend-api.exe"),            // en resources/
+        exe_d.join("..").join("backend-api.exe"),                   // un nivel arriba
+        env::current_dir()?.join("backend-api.exe"),                // en cwd
+        PathBuf::from(r"C:\Users\coron\Desktop\LICORERA\licorera-flow-manager\src-tauri\backend-api.exe"), // dev
     ];
 
-    // logs en la carpeta del exe (útiles especialmente en release)
+    // logs en la carpeta del exe
     let out_log = exe_d.join("backend-out.log");
     let err_log = exe_d.join("backend-err.log");
 
-    // abrir/crear fichero de debug (err_log para listar intentos)
+    // abrir/crear fichero de debug
     let mut dbg_file = OpenOptions::new().create(true).append(true).open(&err_log).ok();
-    if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "=== spawn_backend_process candidates check ==="); }
+    if let Some(f) = dbg_file.as_mut() { 
+        let _ = writeln!(f, "\n=== spawn_backend_process ===");
+    }
 
-    // buscar candidato existente e ir registrando
+    // buscar candidato existente
     let mut found: Option<PathBuf> = None;
     for c in candidates.iter() {
-        if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "checking: {}", c.display()); }
+        if let Some(f) = dbg_file.as_mut() { 
+            let _ = writeln!(f, "checking: {}", c.display());
+        }
         if c.exists() {
-            if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "FOUND: {}", c.display()); }
+            if let Some(f) = dbg_file.as_mut() { 
+                let _ = writeln!(f, "FOUND: {}", c.display());
+            }
             found = Some(c.to_path_buf());
             break;
         }
     }
 
-    let script = found.ok_or("No se encontró backend (main.exe/main.py) en las candidatas")?;
-    if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "Iniciando backend desde: {}", script.display()); }
+    let backend_exe = found.ok_or("No se encontró backend-api.exe en las candidatas")?;
+    
+    if let Some(f) = dbg_file.as_mut() { 
+        let _ = writeln!(f, "Iniciando backend desde: {}", backend_exe.display());
+    }
 
-    // abrir/crear ficheros de log (append para no sobreescribir histórico)
+    // abrir/crear ficheros de log
     let stdout_file = OpenOptions::new().create(true).append(true).open(&out_log).ok();
     let stderr_file = OpenOptions::new().create(true).append(true).open(&err_log).ok();
 
     // preparar comando
-    let mut cmd = if script.extension().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("exe")).unwrap_or(false) {
-        Command::new(&script)
-    } else {
-        let mut c = Command::new("python");
-        c.arg(&script);
-        c
-    };
+    let mut cmd = Command::new(&backend_exe);
+    
+    // fijar directorio de trabajo para que el backend encuentre la DB
+    let _ = cmd.current_dir(&exe_d);
 
-    // determinar backend_cwd: si está en .../dist/main.exe usamos su parent().parent()
-    let backend_cwd = if let Some(parent) = script.parent() {
-        if parent.file_name().map(|n| n == "dist").unwrap_or(false) {
-            parent.parent().map(|p| p.to_path_buf()).unwrap_or(exe_d.clone())
-        } else {
-            parent.to_path_buf()
-        }
-    } else {
-        exe_d.clone()
-    };
-
-    // fijar directorio de trabajo para que el backend encuentre la DB/templates/static
-    let _ = cmd.current_dir(&backend_cwd);
-
-    if let Some(f) = stdout_file { let _ = cmd.stdout(f); }
-    if let Some(f) = stderr_file { let _ = cmd.stderr(f); }
+    if let Some(f) = stdout_file { 
+        let _ = cmd.stdout(f);
+    }
+    if let Some(f) = stderr_file { 
+        let _ = cmd.stderr(f);
+    }
 
     match cmd.spawn() {
         Ok(child) => {
-            if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "Backend lanzado, pid: {}", child.id()); }
-            // registra pid para depuración
-            if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(exe_d.join("backend-pid.log")) {
-                let _ = writeln!(f, "pid: {}, started_from: {}", child.id(), script.display());
+            if let Some(f) = dbg_file.as_mut() { 
+                let _ = writeln!(f, "Backend lanzado, pid: {}", child.id());
             }
+            
+            // registra pid para depuración
+            if let Ok(mut f) = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(exe_d.join("backend-pid.log")) 
+            {
+                let _ = writeln!(f, "pid: {}, started_from: {}", child.id(), backend_exe.display());
+            }
+            
             Ok(())
         }
         Err(e) => {
-            if let Some(f) = dbg_file.as_mut() { let _ = writeln!(f, "spawn error: {}", e); }
-            // also write to err_log explicitly if possible
-            if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&err_log) {
+            if let Some(f) = dbg_file.as_mut() { 
                 let _ = writeln!(f, "spawn error: {}", e);
             }
             Err(e.into())
@@ -196,11 +177,12 @@ fn main() {
             // 2) Iniciar backend
             if let Err(e) = spawn_backend_process() {
                 eprintln!("No se pudo iniciar backend: {}", e);
+                // Opcional: mostrar diálogo de error al usuario
             }
 
             // 3) Ajustar ventana principal
             if let Some(win) = app.get_webview_window("main") {
-                let _ = win.set_title("Licorera Flow Manager");
+                let _ = win.set_title("LA LICORERA Flow Manager");
             }
 
             Ok(())

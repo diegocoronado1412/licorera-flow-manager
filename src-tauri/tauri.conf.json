@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.diegocoron.lalicorera",
   "build": {
-    "frontendDist": "../dist",       
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:8080",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
@@ -12,30 +12,30 @@
   "app": {
     "windows": [
       {
-        "title": "LA LICORERA",
-        "width": 800,
-        "height": 600,
+        "title": "LA LICORERA Flow Manager",
+        "width": 1280,
+        "height": 800,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "center": true
       }
     ],
     "security": {
       "csp": null
     }
   },
-"bundle": {
-  "active": true,
-  "targets": ["msi"],
-  "icon": ["icons/icon.ico"],
-  "resources": [
-    "assets/licorera.db",
-    "assets/main.exe",
-    "assets/www/index.html",
-    "assets/www/index-Dr8Aj3kO.css",
-    "assets/www/index-D_oXzl_S.js"
-
-  ]
-}
-
-
+  "bundle": {
+    "active": true,
+    "targets": ["msi"],
+    "icon": ["icons/icon.ico"],
+    "resources": [
+      "backend-api.exe",
+      "assets/licorera.db"
+    ],
+    "windows": {
+      "wix": {
+        "language": "es-ES"
+      }
+    }
+  }
 }

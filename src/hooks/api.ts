@@ -5,10 +5,16 @@ import axios, { AxiosError } from "axios";
  * Normaliza VITE_API_BASE o usa window.location.origin y asegura que termine con /api
  *
  * Comportamiento:
- * - Si VITE_API_BASE está definido lo respetamos tal cual (solo quitamos slashes finales).
- * - Si no está definido, usamos window.location.origin + '/api' como fallback.
+ * - En Tauri (producción): siempre usa http://127.0.0.1:8000
+ * - Si VITE_API_BASE está definido lo respetamos tal cual.
+ * - Si no está definido, usamos el origin del navegador + '/api' como fallback.
  */
 function normalizeApiBase(raw?: string) {
+  // 🔥 IMPORTANTE: En Tauri siempre usar el backend local
+  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+    return "http://127.0.0.1:8000";
+  }
+
   if (!raw) {
     // Fallback: usamos el origin del navegador y añadimos /api
     return `${window.location.origin.replace(/\/+$/, "")}/api`;
@@ -17,10 +23,8 @@ function normalizeApiBase(raw?: string) {
   return raw.replace(/\/+$/, "");
 }
 
-export const API_BASE =
-  normalizeApiBase((import.meta as any).env?.VITE_API_BASE);
-export const ADMIN_KEY =
-  (import.meta as any).env?.VITE_ADMIN_KEY || "CambiaEstaClave";
+export const API_BASE = normalizeApiBase((import.meta as any).env?.VITE_API_BASE);
+export const ADMIN_KEY = (import.meta as any).env?.VITE_ADMIN_KEY || "CambiaEstaClave";
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -34,7 +38,6 @@ export const api = axios.create({
 function handleAxiosError(err: unknown, fallbackMessage = "Error desconocido") {
   if (axios.isAxiosError(err)) {
     return new Error(
-      // Si el backend responde con { detail: "..." } lo usamos, si no usamos message
       (err.response && (err.response as any).data && ((err.response as any).data.detail || (err.response as any).data.message)) ||
       err.message ||
       fallbackMessage
