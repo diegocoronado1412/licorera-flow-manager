@@ -2,35 +2,66 @@
 import axios, { AxiosError } from "axios";
 
 /**
- * Normaliza VITE_API_BASE o usa window.location.origin y asegura que termine con /api
- *
- * Comportamiento:
- * - En Tauri (producción): siempre usa http://127.0.0.1:8000
- * - Si VITE_API_BASE está definido lo respetamos tal cual.
- * - Si no está definido, usamos el origin del navegador + '/api' como fallback.
+ * Normaliza VITE_API_BASE para desarrollo y producción (Tauri)
  */
 function normalizeApiBase(raw?: string) {
-  // 🔥 IMPORTANTE: En Tauri siempre usar el backend local
-  if (typeof window !== 'undefined' && (window as any).__TAURI__) {
+  // 🔥 CRÍTICO: Detectar si estamos en Tauri
+  const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+  
+  if (isTauri) {
+    // En Tauri SIEMPRE usamos localhost:8000
+    console.log("🔧 Tauri detectado - usando http://127.0.0.1:8000");
     return "http://127.0.0.1:8000";
   }
 
+  // En desarrollo web normal
   if (!raw) {
-    // Fallback: usamos el origin del navegador y añadimos /api
-    return `${window.location.origin.replace(/\/+$/, "")}/api`;
+    console.log("🌐 Modo web - usando proxy /api");
+    return "/api"; // Usa el proxy de Vite
   }
-  // Si el desarrollador proveyó VITE_API_BASE lo respetamos y simplemente quitamos slashes finales.
+
+  // Si hay VITE_API_BASE definido, usarlo
+  console.log("📝 Usando VITE_API_BASE:", raw);
   return raw.replace(/\/+$/, "");
 }
 
 export const API_BASE = normalizeApiBase((import.meta as any).env?.VITE_API_BASE);
 export const ADMIN_KEY = (import.meta as any).env?.VITE_ADMIN_KEY || "CambiaEstaClave";
 
+console.log("✅ API_BASE configurado:", API_BASE);
+
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
-  timeout: 15000, // 15 segundos
+  timeout: 15000,
 });
+
+// Interceptor para debug
+api.interceptors.request.use(
+  (config) => {
+    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error("❌ Request error:", error);
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    console.error("❌ Response error:", error.message);
+    if (error.response) {
+      console.error("   Status:", error.response.status);
+      console.error("   Data:", error.response.data);
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Manejo central de errores Axios
@@ -82,7 +113,7 @@ export async function createProduct(data: {
 
 export async function updateProduct(
   product_id: number,
-  patch: { name?: string; price?: number; cost_per_unit?: number }
+  patch: { name?: string; price?: number; cost_per_unit?: number; stock?: number }
 ) {
   try {
     const { data } = await api.put<Product>(`/products/${product_id}`, patch, {

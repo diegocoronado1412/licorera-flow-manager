@@ -3,35 +3,38 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: './', // <- importante para builds empaquetados
+  base: "./",
   server: {
-    host: "::",           // para acceder desde cualquier IP local
-    port: 8080,           // puerto dev
+    host: "::",
+    port: 8080,
+    strictPort: true,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8000", // tu backend FastAPI
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
         secure: false,
-        // NO rewrite, dejamos /api intacto para que FastAPI lo reciba tal cual
       },
     },
   },
   plugins: [
     react(),
-    mode === "development" && componentTagger(), // tagger solo en dev
+    mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"), // alias para imports limpios
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   build: {
     outDir: "dist",
-    sourcemap: mode === "development", // source maps solo en dev
+    sourcemap: mode === "development",
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
-  define: {
-    "process.env": process.env, // útil para variables .env
-  },
+  clearScreen: false,
+  envPrefix: ["VITE_", "TAURI_"],
 }));

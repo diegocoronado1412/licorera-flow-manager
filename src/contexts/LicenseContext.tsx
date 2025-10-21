@@ -1,5 +1,6 @@
 // licorera-flow-manager/src/contexts/LicenseContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { api } from "@/hooks/api";
 
 interface LicenseContextType {
   isActive: boolean;
@@ -21,21 +22,18 @@ export const LicenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch("/api/license/status");
-      if (!res.ok) {
-        setIsActive(false);
-        setCode(null);
-        setExpiresAt(null);
-        setDaysLeft(null);
-        return { active: false, license: null };
-      }
-      const j = await res.json();
+      console.log("🔍 Intentando obtener estado de licencia...");
+      const { data: j } = await api.get("/api/license/status");
+      
+      console.log("✅ Estado de licencia recibido:", j);
       setIsActive(Boolean(j.active));
       setCode(j.license?.code ?? null);
       setExpiresAt(j.license?.expires_at ?? null);
       setDaysLeft(j.license?.days_left ?? null);
       return { active: Boolean(j.active), license: j.license ?? null };
-    } catch (e) {
+    } catch (e: any) {
+      console.error("❌ Error obteniendo estado de licencia:", e.message);
+      console.error("   Detalles:", e.response?.data || e);
       setIsActive(false);
       setCode(null);
       setExpiresAt(null);
@@ -45,36 +43,39 @@ export const LicenseProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   useEffect(() => {
-    // cargar estado inicial y refrescar cada 10 segundos
+    console.log("🚀 LicenseProvider montado - iniciando verificación");
     fetchStatus();
-    const interval = setInterval(fetchStatus, 10000);
+    const interval = setInterval(() => {
+      console.log("🔄 Refrescando estado de licencia...");
+      fetchStatus();
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
   const activateLicense = async (licenseCode: string) => {
-    const res = await fetch("/api/license/activate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: licenseCode }),
-    });
-
-    if (!res.ok) {
-      let j: any = null;
-      try { j = await res.json(); } catch (e) {}
-      const msg = j?.detail ?? j?.message ?? "Error al activar licencia";
+    try {
+      console.log("🔑 Activando licencia:", licenseCode);
+      const { data } = await api.post("/api/license/activate", { code: licenseCode });
+      console.log("✅ Licencia activada:", data);
+      await fetchStatus();
+    } catch (e: any) {
+      console.error("❌ Error activando licencia:", e.message);
+      const msg = e?.response?.data?.detail ?? e?.response?.data?.message ?? "Error al activar licencia";
       throw new Error(msg);
     }
-
-    await fetchStatus();
   };
 
   const resetLicense = async () => {
-    const res = await fetch("/api/license/reset", { method: "POST" });
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({ detail: "Error" }));
-      throw new Error(j.detail || "Error al resetear licencia");
+    try {
+      console.log("🔄 Reseteando licencia...");
+      const { data } = await api.post("/api/license/reset");
+      console.log("✅ Licencia reseteada:", data);
+      await fetchStatus();
+    } catch (e: any) {
+      console.error("❌ Error reseteando licencia:", e.message);
+      const msg = e?.response?.data?.detail ?? "Error al resetear licencia";
+      throw new Error(msg);
     }
-    await fetchStatus();
   };
 
   return (
