@@ -3,11 +3,17 @@ import axios, { AxiosError } from "axios";
 
 /**
  * Normaliza VITE_API_BASE o usa window.location.origin y asegura que termine con /api
+ *
+ * Comportamiento:
+ * - Si VITE_API_BASE está definido lo respetamos tal cual (solo quitamos slashes finales).
+ * - Si no está definido, usamos window.location.origin + '/api' como fallback.
  */
 function normalizeApiBase(raw?: string) {
   if (!raw) {
+    // Fallback: usamos el origin del navegador y añadimos /api
     return `${window.location.origin.replace(/\/+$/, "")}/api`;
   }
+  // Si el desarrollador proveyó VITE_API_BASE lo respetamos y simplemente quitamos slashes finales.
   return raw.replace(/\/+$/, "");
 }
 
@@ -28,7 +34,10 @@ export const api = axios.create({
 function handleAxiosError(err: unknown, fallbackMessage = "Error desconocido") {
   if (axios.isAxiosError(err)) {
     return new Error(
-      err.response?.data?.detail || err.message || fallbackMessage
+      // Si el backend responde con { detail: "..." } lo usamos, si no usamos message
+      (err.response && (err.response as any).data && ((err.response as any).data.detail || (err.response as any).data.message)) ||
+      err.message ||
+      fallbackMessage
     );
   }
   return new Error(fallbackMessage);

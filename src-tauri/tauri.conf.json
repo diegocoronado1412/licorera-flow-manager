@@ -23,10 +23,19 @@
       "csp": null
     }
   },
-  "bundle": {
-    "active": true,
-    "targets": ["msi"],
-    "icon": ["icons/icon.ico"],
-    "resources": ["assets/licorera.db"]
-  }
+"bundle": {
+  "active": true,
+  "targets": ["msi"],
+  "icon": ["icons/icon.ico"],
+  "resources": [
+    "assets/licorera.db",
+    "assets/main.exe",
+    "assets/www/index.html",
+    "assets/www/index-Dr8Aj3kO.css",
+    "assets/www/index-D_oXzl_S.js"
+
+  ]
+}
+
+
 }
