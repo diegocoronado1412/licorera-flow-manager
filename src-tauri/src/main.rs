@@ -3,10 +3,12 @@
 use std::error::Error;
 use std::fs::{self, OpenOptions};
 use std::path::PathBuf;
-use std::process::Command;
 use std::env;
 use std::io::Write;
 use tauri::Manager;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::Duration;
 
 /// Devuelve el directorio que contiene el exe (parent)
 fn exe_dir() -> Result<PathBuf, Box<dyn Error>> {
@@ -165,28 +167,83 @@ fn spawn_backend_process() -> Result<(), Box<dyn Error>> {
         }
     }
 }
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    // Iniciar el backend de Python en un hilo separado
+    thread::spawn(|| {
+        #[cfg(target_os = "windows")]
+        {
+            // Buscar el ejecutable del backend
+            let backend_exe = if cfg!(debug_assertions) {
+                // En desarrollo, usar Python directamente
+                let python_path = std::env::current_dir()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .join("backend")
+                    .join(".venv")
+                    .join("Scripts")
+                    .join("python.exe");
+                
+                let main_py = std::env::current_dir()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .join("backend")
+                    .join("main.py");
+
+                println!("🐍 Iniciando backend en modo desarrollo");
+                println!("   Python: {:?}", python_path);
+                println!("   Script: {:?}", main_py);
+
+                Command::new(python_path)
+                    .arg(main_py)
+                    .current_dir(std::env::current_dir().unwrap().parent().unwrap().join("backend"))
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .expect("❌ No se pudo iniciar el backend de Python")
+            } else {
+                // En producción, buscar el ejecutable empaquetado
+                let exe_path = std::env::current_exe()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .join("backend-api.exe");
+
+                println!("🚀 Iniciando backend en modo producción");
+                println!("   Ejecutable: {:?}", exe_path);
+
+                Command::new(exe_path)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                    .expect("❌ No se pudo iniciar el backend-api.exe")
+            };
+
+            println!("✅ Backend iniciado correctamente");
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            println!("⚠️  Plataforma no soportada para auto-inicio del backend");
+        }
+    });
+
+    // Esperar a que el backend se inicie
+    println!("⏳ Esperando a que el backend esté listo...");
+    thread::sleep(Duration::from_secs(3));
+
     tauri::Builder::default()
         .setup(|app| {
-            // 1) Copiar DB
-            if let Err(e) = copy_db_to_places() {
-                eprintln!("Error copiando DB: {}", e);
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
             }
-
-            // 2) Iniciar backend
-            if let Err(e) = spawn_backend_process() {
-                eprintln!("No se pudo iniciar backend: {}", e);
-                // Opcional: mostrar diálogo de error al usuario
-            }
-
-            // 3) Ajustar ventana principal
-            if let Some(win) = app.get_webview_window("main") {
-                let _ = win.set_title("LA LICORERA Flow Manager");
-            }
-
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("Error al iniciar la aplicación Tauri");
+        .expect("error while running tauri application");
 }

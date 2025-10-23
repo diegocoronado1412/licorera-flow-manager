@@ -1,131 +1,50 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "LA LICORERA Flow Manager",
+  "version": "1.0.0",
+  "identifier": "com.lalicorera.flowmanager",
   "build": {
-    "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:8080",
-    "distDir": "../dist",
-    "withGlobalTauri": true
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:8080",
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "LA LICORERA Flow Manager",
-    "version": "1.0.0"
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "resources": [
+      "../backend/backend-api.exe",
+      "../backend/data/*"
+    ],
+    "externalBin": [
+      "backend-api"
+    ]
   },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "shell": {
-        "all": false,
-        "open": false
-      },
-      "http": {
-        "all": true,
-        "request": true,
-        "scope": [
-          "http://127.0.0.1:8000/**",
-          "http://localhost:8000/**",
-          "http://127.0.0.1:8000",
-          "http://localhost:8000"
-        ]
-      },
-      "fs": {
-        "all": false,
-        "readFile": false,
-        "writeFile": false,
-        "readDir": false,
-        "copyFile": false,
-        "createDir": false,
-        "removeDir": false,
-        "removeFile": false,
-        "renameFile": false,
-        "exists": false,
-        "scope": []
-      },
-      "window": {
-        "all": false,
-        "close": true,
-        "hide": true,
-        "show": true,
-        "maximize": true,
-        "minimize": true,
-        "unmaximize": true,
-        "unminimize": true,
-        "startDragging": true,
-        "create": false,
-        "center": true
-      },
-      "protocol": {
-        "all": false,
-        "asset": true,
-        "assetScope": ["**"]
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "Business",
-      "copyright": "Copyright © 2025 LA LICORERA Drink Ice",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.lalicorera.flowmanager",
-      "longDescription": "Sistema completo de gestión para LA LICORERA Drink Ice - Punto de venta, inventario y administración",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "Sistema de gestión LA LICORERA",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": "",
-        "wix": {
-          "language": "es-ES"
-        }
-      }
-    },
-    "security": {
-      "csp": "default-src 'self' tauri:; connect-src 'self' http://127.0.0.1:8000 http://localhost:8000 ws://127.0.0.1:8000 ws://localhost:8000 tauri:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' data:"
-    },
-    "updater": {
-      "active": false
-    },
+  "app": {
     "windows": [
       {
         "title": "LA LICORERA Flow Manager",
         "width": 1280,
         "height": 800,
-        "minWidth": 1024,
-        "minHeight": 700,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true,
-        "transparent": false,
-        "center": true,
-        "alwaysOnTop": false,
-        "skipTaskbar": false,
-        "fileDropEnabled": false,
-        "visible": true,
-        "maximized": false
+        "minWidth": 1024,
+        "minHeight": 600
       }
     ],
-    "systemTray": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": false,
-      "menuOnLeftClick": false,
-      "title": "LA LICORERA"
+    "security": {
+      "csp": null
     }
   }
 }
