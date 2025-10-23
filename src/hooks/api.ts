@@ -1,3 +1,4 @@
+
 // LICORERA/licorera-flow-manager/src/hooks/api.ts
 import axios, { AxiosError } from "axios";
 
@@ -15,20 +16,28 @@ function normalizeApiBase(raw?: string) {
   }
 
   // En desarrollo web normal
-  if (!raw) {
-    console.log("🌐 Modo web - usando proxy /api");
-    return "/api"; // Usa el proxy de Vite
+  const isDev = import.meta.env.DEV;
+  
+  if (isDev && !raw) {
+    // Usa rutas relativas para que Vite proxy funcione
+    console.log("🌐 Modo desarrollo web - usando rutas relativas");
+    return ""; // Vacío para rutas relativas /api, /products, etc.
   }
 
-  // Si hay VITE_API_BASE definido, usarlo
-  console.log("📝 Usando VITE_API_BASE:", raw);
-  return raw.replace(/\/+$/, "");
+  if (raw) {
+    console.log("📝 Usando VITE_API_BASE:", raw);
+    return raw.replace(/\/+$/, "");
+  }
+
+  // Fallback producción
+  console.log("🏭 Producción - asumiendo mismo origen");
+  return "";
 }
 
 export const API_BASE = normalizeApiBase((import.meta as any).env?.VITE_API_BASE);
 export const ADMIN_KEY = (import.meta as any).env?.VITE_ADMIN_KEY || "CambiaEstaClave";
 
-console.log("✅ API_BASE configurado:", API_BASE);
+console.log("✅ API_BASE configurado:", API_BASE || "(rutas relativas)");
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -39,7 +48,8 @@ export const api = axios.create({
 // Interceptor para debug
 api.interceptors.request.use(
   (config) => {
-    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    const url = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${url}`);
     return config;
   },
   (error) => {

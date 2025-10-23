@@ -1,3 +1,4 @@
+// src/App.tsx - VERSIÓN CORREGIDA
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,8 +27,21 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 function AppRoutes() {
-  const { isActive } = useLicense();
+  const { isActive, isLoading } = useLicense();
 
+  // 🔥 CRÍTICO: Mostrar loading mientras verificamos
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Verificando licencia...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Si NO está activa, SOLO mostrar activación
   if (!isActive) {
     return (
       <Routes>
@@ -36,73 +50,35 @@ function AppRoutes() {
     );
   }
 
+  // ✅ Licencia verificada y activa
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route
-        path="*"
+        path="/app/*"
         element={
-          <div className="min-h-screen flex w-full bg-background">
-            <AppSidebar />
-            <div className="flex-1 flex flex-col">
-              <AppHeader />
-              <Routes>
-                <Route
-                  path="/app"
-                  element={
-                    <ProtectedRoute>
-                      <Index />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/inventory"
-                  element={
-                    <ProtectedRoute>
-                      <Inventory />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/pos"
-                  element={
-                    <ProtectedRoute>
-                      <POS />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/settings"
-                  element={
-                    <ProtectedRoute>
-                      <SettingsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/users"
-                  element={
-                    <ProtectedRoute>
-                      <UsersPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/app/reports"
-                  element={
-                    <ProtectedRoute>
-                      <ReportsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+          <ProtectedRoute>
+            <div className="min-h-screen flex w-full bg-background">
+              <AppSidebar />
+              <div className="flex-1 flex flex-col">
+                <AppHeader />
+                <Routes>
+                  <Route index element={<Index />} />
+                  <Route path="inventory" element={<Inventory />} />
+                  <Route path="pos" element={<POS />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="reports" element={<ReportsPage />} />
+                </Routes>
+              </div>
             </div>
-          </div>
+          </ProtectedRoute>
         }
       />
+
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

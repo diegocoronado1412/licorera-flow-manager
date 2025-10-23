@@ -154,54 +154,62 @@ export default function Inventory() {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   }
-
-  async function onSave() {
-    if (!editing) return;
-    if (!isAdmin) {
-      toast.error("No tienes permisos para editar");
-      return;
-    }
-    try {
-      const newName = newFormValue(form.name);
-      const newPrice = numberOrZero(form.price);
-      const newCost = numberOrZero(form.cost);
-      const newStockAdd = numberOrZero(form.newStock);
-      // <-- leemos manualStock desde el form (solo cambio mínimo)
-      const manualStock = numberOrZero(form.finalCount);
-
-      // calculamos stock final: si admin editó manualStock, partimos de ese; sino partimos del editing.finalCount
-      let finalStock = editing.finalCount;
-      if (manualStock !== editing.finalCount) {
-        finalStock = manualStock;
-      }
-
-      // si además se agregó nuevo ingreso lo sumamos
-      if (newStockAdd > 0) {
-        finalStock += newStockAdd;
-      }
-
-      // actualizamos los campos básicos
-      await updateProduct(editing.id, {
-        name: newName,
-        price: newPrice,
-        cost_per_unit: newCost,
-        // <-- incluimos stock final solo si cambió (mínimo cambio)
-        ...(finalStock !== editing.finalCount ? { stock: finalStock } : {}),
-      });
-
-      // Si la API separa ajustes en adjustStock para llevar historial, puedes querer usar adjustStock en su lugar.
-      // Mantuvimos updateProduct con stock para cambiar lo menos posible del flujo original.
-
-      toast.success(`Producto actualizado correctamente (nuevo stock: ${finalStock})`);
-      setOpen(false);
-      setEditing(null);
-      await load(searchTerm);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "No se pudo actualizar el producto");
-    }
+async function onSave() {
+  if (!editing) return;
+  if (!isAdmin) {
+    toast.error("No tienes permisos para editar");
+    return;
   }
+  
+  try {
+    const newName = newFormValue(form.name);
+    const newPrice = numberOrZero(form.price);
+    const newCost = numberOrZero(form.cost);
+    const newStockAdd = numberOrZero(form.newStock);
+    const manualStock = numberOrZero(form.finalCount);
 
+    // 1️⃣ Actualizar datos básicos (nombre, precio, costo)
+    await updateProduct(editing.id, {
+      name: newName,
+      price: newPrice,
+      cost_per_unit: newCost,
+    });
+
+    // 2️⃣ Manejar cambios de stock por separado
+    const stockDiff = manualStock - editing.finalCount;
+    
+    if (stockDiff !== 0) {
+      // Usar adjustStock para generar movimiento de ajuste
+      await adjustStock(
+        editing.id, 
+        stockDiff, 
+        `Ajuste manual: ${stockDiff > 0 ? '+' : ''}${stockDiff}`
+      );
+    }
+
+    if (newStockAdd > 0) {
+      // Registrar nuevo ingreso de stock
+      await adjustStock(
+        editing.id, 
+        newStockAdd, 
+        `Nuevo ingreso: +${newStockAdd} unidades`
+      );
+    }
+
+    const finalTotal = manualStock + newStockAdd;
+    toast.success(
+      `Producto actualizado correctamente (stock final: ${finalTotal})`
+    );
+    
+    setOpen(false);
+    setEditing(null);
+    await load(searchTerm);
+    
+  } catch (e: any) {
+    console.error(e);
+    toast.error(e?.message || "No se pudo actualizar el producto");
+  }
+}
   async function onCreate() {
     if (!isAdmin) {
       toast.error("No tienes permisos para crear productos");
